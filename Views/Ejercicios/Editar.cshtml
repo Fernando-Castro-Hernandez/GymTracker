@@ -1,0 +1,36 @@
+﻿@model GymTracker.Models.Ejercicio
+@using GymTracker.Models.Enums
+
+@{
+    ViewData["Title"] = "Editar Ejercicio";
+}
+
+<div class="container mt-4">
+    <h1>Editar Ejercicio</h1>
+
+    <form asp-action="Editar" method="post" class="mt-4">
+        <input type="hidden" asp-for="Id" />
+
+        <div class="mb-3">
+            <label asp-for="Nombre" class="form-label">Nombre</label>
+            <input asp-for="Nombre" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="GrupoMuscular" class="form-label">Grupo Muscular</label>
+            <select asp-for="GrupoMuscular"
+                    asp-items="Html.GetEnumSelectList<GrupoMuscular>()"
+                    class="form-select"></select>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Descripcion" class="form-label">Descripción (opcional)</label>
+            <textarea asp-for="Descripcion" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </div>
+    </form>
+</div>
