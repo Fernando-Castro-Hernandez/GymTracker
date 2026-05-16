@@ -1,0 +1,46 @@
+﻿@model GymTracker.Models.Rutina
+
+@{
+    ViewData["Title"] = "Eliminar Rutina";
+}
+
+<div class="container mt-4" style="max-width: 700px;">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+            <h3 class="mb-0">¿Estás seguro de eliminar esta rutina?</h3>
+        </div>
+        <div class="card-body">
+            <p>Esta acción no se puede deshacer. Todos los ejercicios asignados a esta rutina también se eliminarán.</p>
+
+            <dl class="row">
+                <dt class="col-sm-3">Nombre</dt>
+                <dd class="col-sm-9">@Model.Nombre</dd>
+
+                <dt class="col-sm-3">Descripción</dt>
+                <dd class="col-sm-9">@(Model.Descripcion ?? "Sin descripción")</dd>
+
+                <dt class="col-sm-3">Ejercicios</dt>
+                <dd class="col-sm-9">
+                    @if (Model.Ejercicios.Any())
+                    {
+                        <span class="badge bg-warning">@Model.Ejercicios.Count ejercicios serán eliminados</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Ninguno</span>
+                    }
+                </dd>
+
+                <dt class="col-sm-3">Creada el</dt>
+                <dd class="col-sm-9">@Model.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy")</dd>
+            </dl>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+            <form asp-action="Eliminar" method="post" class="d-inline">
+                <input type="hidden" asp-for="Id" />
+                <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>

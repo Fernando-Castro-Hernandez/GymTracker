@@ -1,0 +1,51 @@
+﻿@model List<GymTracker.Models.Rutina>
+
+@{
+    ViewData["Title"] = "Mis Rutinas";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Mis Rutinas</h1>
+        <a asp-action="Agregar" class="btn btn-primary">+ Agregar Rutina</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            No tienes rutinas todavía. ¡Crea la primera!
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var rutina in Model)
+            {
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">@rutina.Nombre</h5>
+                            <p class="card-text text-muted small">
+                                Creada el @rutina.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy")
+                            </p>
+                            @if (!string.IsNullOrEmpty(rutina.Descripcion))
+                            {
+                                <p class="card-text">@rutina.Descripcion</p>
+                            }
+                        </div>
+                        <div class="card-footer d-flex justify-content-between">
+                            <a asp-action="Detalle" asp-route-id="@rutina.Id"
+                               class="btn btn-sm btn-outline-primary">Ver</a>
+                            <div>
+                                <a asp-action="Editar" asp-route-id="@rutina.Id"
+                                   class="btn btn-sm btn-outline-secondary">Editar</a>
+                                <a asp-action="Eliminar" asp-route-id="@rutina.Id"
+                                   class="btn btn-sm btn-outline-danger">Eliminar</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
