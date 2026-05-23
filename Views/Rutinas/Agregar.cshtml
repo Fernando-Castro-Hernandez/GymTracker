@@ -1,29 +1,250 @@
-﻿@model GymTracker.Models.Rutina
-
-@{
-    ViewData["Title"] = "Agregar Rutina";
+﻿@{
+    ViewData["Title"] = "Crear Rutina";
+    var ejerciciosDisponibles = ViewBag.EjerciciosDisponibles as List<GymTracker.Models.Ejercicio> ?? new();
 }
 
-<div class="container mt-4" style="max-width: 700px;">
+<div class="container mt-4" style="max-width: 900px;">
     <h1>Crear Rutina</h1>
-    <p class="text-muted">Por ahora solo podrás crear la rutina con nombre y descripción. La asignación de ejercicios estará disponible próximamente.</p>
 
-    <form asp-action="Agregar" method="post" class="mt-4">
-        <div class="mb-3">
-            <label asp-for="Nombre" class="form-label">Nombre</label>
-            <input asp-for="Nombre" class="form-control"
-                   placeholder="Ej. Push - Lunes" required maxlength="100" />
+    @if (!ejerciciosDisponibles.Any())
+    {
+        <div class="alert alert-warning mt-4">
+            <h5 class="alert-heading">No tienes ejercicios en tu catálogo</h5>
+            <p>Antes de crear una rutina, necesitas tener al menos un ejercicio en tu catálogo personal.</p>
+            <hr />
+            <a asp-controller="Ejercicios" asp-action="Agregar" class="btn btn-primary">Crear mi primer ejercicio</a>
+            <a asp-action="Index" class="btn btn-secondary">Volver a Mis Rutinas</a>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">Llena los datos de la rutina y agrega los ejercicios que la compondrán con sus metas (series, repeticiones y peso objetivo).</p>
+
+        <!-- Datos básicos de la rutina -->
+        <div class="card mt-4">
+            <div class="card-header"><strong>Datos de la rutina</strong></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="rutina-nombre" class="form-label">Nombre</label>
+                    <input type="text" id="rutina-nombre" class="form-control"
+                           placeholder="Ej. Push - Lunes" maxlength="100" required />
+                </div>
+                <div class="mb-3">
+                    <label for="rutina-descripcion" class="form-label">Descripción (opcional)</label>
+                    <textarea id="rutina-descripcion" class="form-control" rows="2"
+                              placeholder="Ej. Día de pecho, hombro y tríceps"></textarea>
+                </div>
+            </div>
         </div>
 
-        <div class="mb-3">
-            <label asp-for="Descripcion" class="form-label">Descripción (opcional)</label>
-            <textarea asp-for="Descripcion" class="form-control" rows="3"
-                      placeholder="Ej. Día de pecho, hombro y tríceps. Enfoque en compuestos."></textarea>
+        <!-- Agregar ejercicio a la rutina -->
+        <div class="card mt-4">
+            <div class="card-header"><strong>Agregar ejercicio</strong></div>
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label for="ejercicio-select" class="form-label">Ejercicio</label>
+                        <select id="ejercicio-select" class="form-select">
+                            @foreach (var ej in ejerciciosDisponibles)
+                            {
+                                <option value="@ej.Id" data-grupo="@ej.GrupoMuscular">@ej.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="input-series" class="form-label">Series</label>
+                        <input type="number" id="input-series" class="form-control"
+                               min="1" max="20" value="3" />
+                    </div>
+                    <div class="col-md-2">
+                        <label for="input-reps" class="form-label">Reps</label>
+                        <input type="number" id="input-reps" class="form-control"
+                               min="1" max="100" value="10" />
+                    </div>
+                    <div class="col-md-2">
+                        <label for="input-peso" class="form-label">Peso (kg)</label>
+                        <input type="number" id="input-peso" class="form-control"
+                               min="0" max="9999" step="0.5" value="0" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" id="btn-agregar" class="btn btn-success w-100">
+                            + Agregar
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="d-flex justify-content-between">
+        <!-- Tabla de ejercicios agregados -->
+        <div class="card mt-4">
+            <div class="card-header"><strong>Ejercicios en la rutina</strong></div>
+            <div class="card-body p-0">
+                <table class="table mb-0" id="tabla-ejercicios">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Ejercicio</th>
+                            <th>Grupo</th>
+                            <th class="text-center">Series</th>
+                            <th class="text-center">Reps</th>
+                            <th class="text-end">Peso</th>
+                            <th class="text-center">Quitar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-body">
+                        <tr id="fila-vacia">
+                            <td colspan="7" class="text-center text-muted py-4">
+                                Aún no has agregado ejercicios. La rutina se puede guardar vacía.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="d-flex justify-content-between mt-4 mb-4">
             <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary">Crear Rutina</button>
+            <button type="button" id="btn-guardar" class="btn btn-primary">Guardar Rutina</button>
         </div>
-    </form>
+
+        <!-- Mensajes de feedback -->
+        <div id="mensaje-error" class="alert alert-danger d-none"></div>
+    }
 </div>
+
+@if (ejerciciosDisponibles.Any())
+{
+    <script>
+        // ===== Estado en memoria =====
+        // Array que mantiene los ejercicios agregados a la rutina
+        const ejerciciosAgregados = [];
+
+        // ===== Referencias a elementos del DOM =====
+        const selectEjercicio = document.getElementById('ejercicio-select');
+        const inputSeries = document.getElementById('input-series');
+        const inputReps = document.getElementById('input-reps');
+        const inputPeso = document.getElementById('input-peso');
+        const btnAgregar = document.getElementById('btn-agregar');
+        const btnGuardar = document.getElementById('btn-guardar');
+        const tablaBody = document.getElementById('tabla-body');
+        const mensajeError = document.getElementById('mensaje-error');
+
+        // ===== Agregar un ejercicio a la tabla local =====
+        btnAgregar.addEventListener('click', () => {
+            const option = selectEjercicio.options[selectEjercicio.selectedIndex];
+            const ejercicioId = parseInt(option.value);
+            const nombre = option.text;
+            const grupo = option.dataset.grupo;
+            const series = parseInt(inputSeries.value);
+            const reps = parseInt(inputReps.value);
+            const peso = parseFloat(inputPeso.value);
+
+            // Validación básica
+            if (!series || series < 1) { alert('Series debe ser al menos 1'); return; }
+            if (!reps || reps < 1) { alert('Repeticiones debe ser al menos 1'); return; }
+            if (peso < 0) { alert('Peso no puede ser negativo'); return; }
+
+            // Agregar al array de estado
+            ejerciciosAgregados.push({
+                ejercicioId: ejercicioId,
+                nombreEjercicio: nombre,
+                grupoMuscular: grupo,
+                seriesObjetivo: series,
+                repeticionesObjetivo: reps,
+                pesoObjetivo: peso
+            });
+
+            // Redibujar la tabla
+            renderTabla();
+        });
+
+        // ===== Quitar un ejercicio de la tabla =====
+        function quitarEjercicio(indice) {
+            ejerciciosAgregados.splice(indice, 1);
+            renderTabla();
+        }
+
+        // ===== Dibujar la tabla según el estado actual =====
+        function renderTabla() {
+            tablaBody.innerHTML = '';
+
+            if (ejerciciosAgregados.length === 0) {
+                tablaBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            Aún no has agregado ejercicios. La rutina se puede guardar vacía.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            ejerciciosAgregados.forEach((ej, i) => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td><strong>${ej.nombreEjercicio}</strong></td>
+                    <td><span class="badge bg-secondary">${ej.grupoMuscular}</span></td>
+                    <td class="text-center">${ej.seriesObjetivo}</td>
+                    <td class="text-center">${ej.repeticionesObjetivo}</td>
+                    <td class="text-end">${ej.pesoObjetivo} kg</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="quitarEjercicio(${i})">X</button>
+                    </td>`;
+                tablaBody.appendChild(fila);
+            });
+        }
+
+        // ===== Guardar la rutina completa al servidor =====
+        btnGuardar.addEventListener('click', async () => {
+            const nombre = document.getElementById('rutina-nombre').value.trim();
+            const descripcion = document.getElementById('rutina-descripcion').value.trim();
+
+            // Validación del nombre
+            if (!nombre) {
+                mostrarError('El nombre de la rutina es obligatorio.');
+                return;
+            }
+
+            // Construir el payload
+            const payload = {
+                nombre: nombre,
+                descripcion: descripcion || null,
+                ejercicios: ejerciciosAgregados
+            };
+
+            // Deshabilitar botón mientras se procesa
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = 'Guardando...';
+            mensajeError.classList.add('d-none');
+
+            try {
+                const response = await fetch('@Url.Action("Agregar", "Rutinas")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    // Redirigir al listado
+                    window.location.href = '@Url.Action("Index", "Rutinas")';
+                } else {
+                    const errorText = await response.text();
+                    mostrarError('Error al guardar la rutina: ' + errorText);
+                    btnGuardar.disabled = false;
+                    btnGuardar.textContent = 'Guardar Rutina';
+                }
+            } catch (err) {
+                mostrarError('Error de conexión: ' + err.message);
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar Rutina';
+            }
+        });
+
+        function mostrarError(msg) {
+            mensajeError.textContent = msg;
+            mensajeError.classList.remove('d-none');
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+    </script>
+}

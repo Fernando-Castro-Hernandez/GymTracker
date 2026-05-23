@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using GymTracker.Models.ViewModels;
 
 namespace GymTracker.Controllers
 {
@@ -41,22 +42,76 @@ namespace GymTracker.Controllers
         }
 
         // ===== Agregar GET =====
-        public IActionResult Agregar()
+        public async Task<IActionResult> Agregar()
         {
+            var usuarioId = ObtenerUsuarioId();
+
+            // Cargar los ejercicios disponibles del usuario para el dropdown
+            var ejerciciosDisponibles = await context.Ejercicios
+                .Where(e => e.UsuarioId == usuarioId)
+                .OrderBy(e => e.Nombre)
+                .ToListAsync();
+
+            ViewBag.EjerciciosDisponibles = ejerciciosDisponibles;
             return View();
         }
 
-        // ===== Agregar POST =====
+        // ===== Agregar POST (recibe JSON desde JavaScript) =====
         [HttpPost]
-        public async Task<IActionResult> Agregar(Rutina rutina)
+        public async Task<IActionResult> Agregar([FromBody] CrearRutinaViewModel modelo)
         {
-            rutina.UsuarioId = ObtenerUsuarioId();
-            rutina.FechaCreacion = DateTime.UtcNow;
+            var usuarioId = ObtenerUsuarioId();
 
+            // Validación 1: nombre obligatorio
+            if (string.IsNullOrWhiteSpace(modelo.Nombre))
+            {
+                return BadRequest("El nombre de la rutina es obligatorio.");
+            }
+
+            // Validación 2: todos los EjercicioId deben pertenecer al usuario actual
+            if (modelo.Ejercicios.Any())
+            {
+                var idsEnviados = modelo.Ejercicios.Select(e => e.EjercicioId).Distinct().ToList();
+
+                var idsValidos = await context.Ejercicios
+                    .Where(e => e.UsuarioId == usuarioId && idsEnviados.Contains(e.Id))
+                    .Select(e => e.Id)
+                    .ToListAsync();
+
+                if (idsValidos.Count != idsEnviados.Count)
+                {
+                    return BadRequest("Uno o más ejercicios no son válidos o no te pertenecen.");
+                }
+            }
+
+            // Crear la entidad Rutina
+            var rutina = new Rutina
+            {
+                Nombre = modelo.Nombre.Trim(),
+                Descripcion = modelo.Descripcion?.Trim(),
+                UsuarioId = usuarioId,
+                FechaCreacion = DateTime.UtcNow
+            };
+
+            // Agregar los ejercicios asignados (si los hay)
+            int orden = 1;
+            foreach (var ej in modelo.Ejercicios)
+            {
+                rutina.Ejercicios.Add(new RutinaEjercicio
+                {
+                    EjercicioId = ej.EjercicioId,
+                    SeriesObjetivo = ej.SeriesObjetivo,
+                    RepeticionesObjetivo = ej.RepeticionesObjetivo,
+                    PesoObjetivo = ej.PesoObjetivo,
+                    Orden = orden++
+                });
+            }
+
+            // Guardar todo en una sola transacción
             context.Rutinas.Add(rutina);
             await context.SaveChangesAsync();
 
-            return RedirectToAction(nameof(Index));
+            return Ok(new { rutinaId = rutina.Id });
         }
 
         // ===== Editar GET =====
