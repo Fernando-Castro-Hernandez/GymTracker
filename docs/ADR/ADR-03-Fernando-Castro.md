@@ -177,3 +177,7 @@ de Presentación, dentro del proyecto `GymTracker.Web`. Lo que el ADR-03 agrega 
 la organización en capas del resto del sistema, para que la lógica de negocio deje
 de vivir dentro de los controllers y el sistema pueda crecer de forma ordenada y
 verificable.
+
+## Diagrama de Arquitectura de Capas que se podría implementar (_PROPUESTO_)
+
+![Diagrama de Arquitectura De Capas GymTracker](DiagramaArqCapas.png)
