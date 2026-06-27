@@ -1,8 +1,70 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@{
+    ViewData["Title"] = "Inicio";
+    var signedIn = SignInManager.IsSignedIn(User);
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<section class="gt-hero mb-5">
+    <span class="gt-eyebrow">Sobrecarga progresiva</span>
+    <h1>
+        Registra tu entrenamiento.<br />
+        <span class="gt-hero-accent">Mide tu progreso.</span>
+    </h1>
+    <p class="lead mb-4">
+        GymTracker es tu bitácora de gimnasio: arma tu catálogo de ejercicios,
+        diseña rutinas con metas de series, repeticiones y peso, y lleva el
+        control real de tu fuerza con el tiempo.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+        @if (signedIn)
+        {
+            <a asp-controller="Rutinas" asp-action="Index" class="btn btn-primary btn-lg">Ir a mis rutinas</a>
+            <a asp-controller="Ejercicios" asp-action="Index" class="btn btn-secondary btn-lg">Ver ejercicios</a>
+        }
+        else
+        {
+            <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-primary btn-lg">Empezar ahora</a>
+            <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-secondary btn-lg">Iniciar sesión</a>
+        }
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card gt-feature">
+            <div class="card-body">
+                <div class="gt-feature-icon">🏋️</div>
+                <h5 class="card-title">Catálogo de ejercicios</h5>
+                <p class="text-muted mb-0">
+                    Crea tu biblioteca personal de ejercicios y organízalos por
+                    grupo muscular para encontrarlos al instante.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card gt-feature">
+            <div class="card-body">
+                <div class="gt-feature-icon">📋</div>
+                <h5 class="card-title">Rutinas con metas</h5>
+                <p class="text-muted mb-0">
+                    Diseña rutinas combinando tus ejercicios con objetivos claros
+                    de series, repeticiones y peso para cada uno.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card gt-feature">
+            <div class="card-body">
+                <div class="gt-feature-icon">📈</div>
+                <h5 class="card-title">Volumen de entrenamiento</h5>
+                <p class="text-muted mb-0">
+                    Calcula el volumen de cada rutina con distintas fórmulas
+                    (tonelaje, series efectivas o volumen relativo).
+                </p>
+            </div>
+        </div>
+    </div>
 </div>
