@@ -106,3 +106,21 @@ docs/ADR/
 ```
 
 Además, se añadió el endpoint `GetVolumen` en `Controllers/Api/RutinasApiController.cs`.
+
+## Uso responsable de IA
+
+En el desarrollo de este proyecto se utilizó **Claude** como
+herramienta de apoyo, bajo un uso responsable:
+
+- Sirvió como apoyo para **entender conceptos** (arquitectura, patrones de diseño,
+  API REST), redactar los ADR y guiar la implementación paso a paso.
+- **Todo el código fue revisado, comprendido y probado** por el autor antes de
+  integrarse; la IA no se usó como sustituto del aprendizaje ni del criterio
+  propio.
+- Las **decisiones de diseño y arquitectura son propias**, tomadas con base en las
+  necesidades reales del sistema.
+- Se verificó que cada cambio funcionara correctamente y no comprometiera la
+  integridad del proyecto.
+
+La IA se empleó como un asistente de aprendizaje y productividad, manteniendo la
+responsabilidad y la autoría del trabajo en todo momento.
