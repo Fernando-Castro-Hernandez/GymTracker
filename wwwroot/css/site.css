@@ -1,31 +1,683 @@
+/* ==========================================================================
+   GymTracker — Sistema de diseño
+   Identidad visual: app de entrenamiento de gimnasio.
+   Paleta oscura con acento "volt" (lima eléctrico) que transmite energía y
+   fuerza. Construido sobre Bootstrap 5 (solo capa visual).
+   ========================================================================== */
+
+:root {
+    /* ----- Paleta ----- */
+    --gt-bg: #15171c;            /* fondo dominante (casi negro, frío) */
+    --gt-surface: #1d2027;       /* tarjetas / superficies elevadas */
+    --gt-surface-2: #252932;     /* superficie secundaria / hover */
+    --gt-border: #2e333d;        /* bordes sutiles */
+    --gt-border-strong: #3a414d;
+
+    --gt-accent: #c5ff2e;        /* acento principal: lima eléctrico (energía) */
+    --gt-accent-dark: #a6e000;   /* acento presionado */
+    --gt-accent-soft: rgba(197, 255, 46, 0.14);
+    --gt-secondary: #ff6a3d;     /* secundario cálido (naranja fuerza) */
+
+    --gt-text: #eef1f5;          /* texto principal alto contraste */
+    --gt-text-muted: #99a1ad;    /* texto secundario */
+    --gt-text-dim: #6b7280;      /* texto terciario / metadatos */
+
+    --gt-danger: #ff4d5e;
+    --gt-warning: #ffb020;
+    --gt-success: #34d399;
+
+    /* ----- Forma y elevación ----- */
+    --gt-radius: 0.85rem;
+    --gt-radius-sm: 0.55rem;
+    --gt-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    --gt-shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
+    --gt-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+    /* Sobrescribe variables de Bootstrap para coherencia global */
+    --bs-body-bg: var(--gt-bg);
+    --bs-body-color: var(--gt-text);
+    --bs-primary: var(--gt-accent);
+    --bs-border-color: var(--gt-border);
+    --bs-link-color: var(--gt-accent);
+    --bs-link-hover-color: var(--gt-accent-dark);
+}
+
+/* ----- Base ----- */
 html {
-  font-size: 14px;
+    font-size: 14px;
+    position: relative;
+    min-height: 100%;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+    html {
+        font-size: 16px;
+    }
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 70px;
+    background-color: var(--gt-bg);
+    background-image:
+        radial-gradient(1200px 600px at 80% -10%, rgba(197, 255, 46, 0.06), transparent 60%),
+        radial-gradient(900px 500px at -10% 0%, rgba(255, 106, 61, 0.05), transparent 55%);
+    background-attachment: fixed;
+    color: var(--gt-text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+/* ----- Tipografía / jerarquía ----- */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--gt-text);
+    font-weight: 700;
+    letter-spacing: -0.01em;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+h1 {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.text-muted {
+    color: var(--gt-text-muted) !important;
+}
+
+a {
+    text-decoration: none;
+}
+
+/* Encabezado de página reutilizable */
+.page-title {
+    font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.25rem);
+    margin-bottom: 0.15rem;
+}
+
+.page-subtitle {
+    color: var(--gt-text-muted);
+    margin-bottom: 0;
+}
+
+/* Pequeño acento de marca: barra lima antes de los títulos de sección */
+.section-accent {
+    position: relative;
+    padding-left: 0.85rem;
+}
+
+.section-accent::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.15em;
+    bottom: 0.15em;
+    width: 4px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--gt-accent), var(--gt-accent-dark));
+}
+
+/* ==========================================================================
+   Navbar
+   ========================================================================== */
+.gt-navbar {
+    background-color: rgba(21, 23, 28, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--gt-border);
+    box-shadow: var(--gt-shadow-sm);
+}
+
+.gt-navbar .navbar-brand {
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    color: var(--gt-text);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.gt-navbar .navbar-brand .brand-mark {
+    color: var(--gt-accent);
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.gt-navbar .navbar-brand .brand-accent {
+    color: var(--gt-accent);
+}
+
+.gt-navbar .nav-link {
+    color: var(--gt-text-muted) !important;
+    font-weight: 600;
+    padding: 0.5rem 0.9rem !important;
+    border-radius: var(--gt-radius-sm);
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.gt-navbar .nav-link:hover,
+.gt-navbar .nav-link:focus {
+    color: var(--gt-text) !important;
+    background-color: var(--gt-surface-2);
+}
+
+/* Estado activo visible */
+.gt-navbar .nav-link.active {
+    color: var(--gt-accent) !important;
+    background-color: var(--gt-accent-soft);
+}
+
+.gt-navbar .navbar-toggler {
+    border-color: var(--gt-border-strong);
+}
+
+.gt-navbar .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%23c5ff2e' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2.2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* ==========================================================================
+   Tarjetas
+   ========================================================================== */
+.card {
+    background-color: var(--gt-surface);
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius);
+    box-shadow: var(--gt-shadow-sm);
+    color: var(--gt-text);
+    overflow: hidden;
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid var(--gt-border);
+    color: var(--gt-text);
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+.card-footer {
+    background-color: rgba(0, 0, 0, 0.18);
+    border-top: 1px solid var(--gt-border);
+    padding: 0.85rem 1.25rem;
+}
+
+.card-title {
+    font-weight: 700;
+}
+
+/* Tarjeta interactiva (listados) con realce al pasar el cursor */
+.gt-card-link {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.gt-card-link:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--gt-shadow-hover);
+    border-color: var(--gt-border-strong);
+}
+
+/* Cinta de acento superior para tarjetas de rutina */
+.gt-card-accent {
+    border-top: 3px solid var(--gt-accent);
+}
+
+/* ==========================================================================
+   Botones
+   ========================================================================== */
+.btn {
+    font-weight: 600;
+    border-radius: var(--gt-radius-sm);
+    padding: 0.5rem 1.1rem;
+    transition: transform 0.12s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-sm {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.825rem;
+}
+
+/* Primario = acento volt; texto oscuro para contraste AA sobre lima */
+.btn-primary {
+    background-color: var(--gt-accent);
+    border-color: var(--gt-accent);
+    color: #14160c;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--gt-accent-dark);
+    border-color: var(--gt-accent-dark);
+    color: #14160c;
+    box-shadow: 0 6px 18px rgba(197, 255, 46, 0.25);
+}
+
+.btn-success {
+    background-color: var(--gt-success);
+    border-color: var(--gt-success);
+    color: #06281d;
+}
+
+.btn-success:hover,
+.btn-success:focus {
+    background-color: #28b88a;
+    border-color: #28b88a;
+    color: #06281d;
+}
+
+.btn-secondary {
+    background-color: var(--gt-surface-2);
+    border-color: var(--gt-border-strong);
+    color: var(--gt-text);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+    background-color: var(--gt-border-strong);
+    border-color: var(--gt-border-strong);
+    color: var(--gt-text);
+}
+
+.btn-danger {
+    background-color: var(--gt-danger);
+    border-color: var(--gt-danger);
+    color: #2a0408;
+}
+
+.btn-danger:hover,
+.btn-danger:focus {
+    background-color: #e23a4b;
+    border-color: #e23a4b;
+    color: #2a0408;
+}
+
+/* Botones "outline" sobre fondo oscuro */
+.btn-outline-primary {
+    color: var(--gt-accent);
+    border-color: var(--gt-border-strong);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+    background-color: var(--gt-accent);
+    border-color: var(--gt-accent);
+    color: #14160c;
+}
+
+.btn-outline-secondary {
+    color: var(--gt-text-muted);
+    border-color: var(--gt-border-strong);
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+    background-color: var(--gt-surface-2);
+    border-color: var(--gt-border-strong);
+    color: var(--gt-text);
+}
+
+.btn-outline-dark {
+    color: var(--gt-text-muted);
+    border-color: var(--gt-border-strong);
+}
+
+.btn-outline-dark:hover,
+.btn-outline-dark:focus {
+    background-color: var(--gt-surface-2);
+    border-color: var(--gt-border-strong);
+    color: var(--gt-text);
+}
+
+.btn-outline-danger {
+    color: var(--gt-danger);
+    border-color: rgba(255, 77, 94, 0.4);
+}
+
+.btn-outline-danger:hover,
+.btn-outline-danger:focus {
+    background-color: var(--gt-danger);
+    border-color: var(--gt-danger);
+    color: #2a0408;
+}
+
+/* Filtro tipo "chip" activo (botón sólido de filtro) */
+.btn-dark {
+    background-color: var(--gt-accent);
+    border-color: var(--gt-accent);
+    color: #14160c;
+}
+
+.btn-dark:hover,
+.btn-dark:focus {
+    background-color: var(--gt-accent-dark);
+    border-color: var(--gt-accent-dark);
+    color: #14160c;
+}
+
+/* Foco accesible coherente con el acento */
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(197, 255, 46, 0.35);
+    outline: none;
+}
+
+/* ==========================================================================
+   Formularios
+   ========================================================================== */
+.form-label {
+    color: var(--gt-text-muted);
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+}
+
+.form-control,
+.form-select {
+    background-color: var(--gt-bg);
+    border: 1px solid var(--gt-border-strong);
+    border-radius: var(--gt-radius-sm);
+    color: var(--gt-text);
+    padding: 0.6rem 0.85rem;
+}
+
+.form-control::placeholder {
+    color: var(--gt-text-dim);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--gt-bg);
+    border-color: var(--gt-accent);
+    color: var(--gt-text);
+}
+
+.form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2399a1ad' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+}
+
+.form-select option {
+    background-color: var(--gt-surface);
+    color: var(--gt-text);
+}
+
+.form-floating > .form-control-plaintext::placeholder,
+.form-floating > .form-control::placeholder {
+    color: var(--gt-text-dim);
+    text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder,
+.form-floating > .form-control:focus::placeholder {
+    text-align: start;
+}
+
+/* ==========================================================================
+   Tablas
+   ========================================================================== */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--gt-text);
+    color: var(--gt-text);
+    margin-bottom: 0;
+}
+
+.table > thead th {
+    color: var(--gt-text-dim);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--gt-border);
+    padding: 0.85rem 0.9rem;
+}
+
+.table > tbody > tr {
+    border-color: var(--gt-border);
+}
+
+.table > tbody > tr > td {
+    padding: 0.85rem 0.9rem;
+    vertical-align: middle;
+    border-color: var(--gt-border);
+}
+
+.table-hover > tbody > tr:hover > * {
+    --bs-table-hover-bg: var(--gt-surface-2);
+    --bs-table-hover-color: var(--gt-text);
+    color: var(--gt-text);
+}
+
+/* ==========================================================================
+   Badges — grupos musculares con color por grupo
+   ========================================================================== */
+.badge {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 0.4em 0.7em;
+    border-radius: 999px;
+}
+
+/* Bootstrap genérico, reforzado para fondo oscuro */
+.badge.bg-secondary {
+    background-color: var(--gt-surface-2) !important;
+    color: var(--gt-text) !important;
+    border: 1px solid var(--gt-border-strong);
+}
+
+.badge.bg-warning {
+    background-color: rgba(255, 176, 32, 0.18) !important;
+    color: var(--gt-warning) !important;
+    border: 1px solid rgba(255, 176, 32, 0.35);
+}
+
+/* Badge de grupo muscular: usar .gt-badge-grupo + data-grupo en la vista.
+   El selector por atributo colorea cada grupo de forma consistente. */
+.gt-badge-grupo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    padding: 0.4em 0.75em;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+    background-color: var(--gt-surface-2);
+    color: var(--gt-text);
+    border: 1px solid var(--gt-border-strong);
+}
+
+.gt-badge-grupo::before {
+    content: "";
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.9;
+}
+
+.gt-badge-grupo[data-grupo="Pecho"]   { color: #ff7a8a; border-color: rgba(255, 122, 138, 0.4); background: rgba(255, 122, 138, 0.12); }
+.gt-badge-grupo[data-grupo="Espalda"] { color: #57b6ff; border-color: rgba(87, 182, 255, 0.4);  background: rgba(87, 182, 255, 0.12); }
+.gt-badge-grupo[data-grupo="Pierna"]  { color: #c5ff2e; border-color: rgba(197, 255, 46, 0.4);  background: rgba(197, 255, 46, 0.12); }
+.gt-badge-grupo[data-grupo="Hombro"]  { color: #ffb020; border-color: rgba(255, 176, 32, 0.4);  background: rgba(255, 176, 32, 0.12); }
+.gt-badge-grupo[data-grupo="Brazo"]   { color: #ff6a3d; border-color: rgba(255, 106, 61, 0.4);  background: rgba(255, 106, 61, 0.12); }
+.gt-badge-grupo[data-grupo="Core"]    { color: #b794ff; border-color: rgba(183, 148, 255, 0.4); background: rgba(183, 148, 255, 0.12); }
+.gt-badge-grupo[data-grupo="Cardio"]  { color: #34d399; border-color: rgba(52, 211, 153, 0.4);  background: rgba(52, 211, 153, 0.12); }
+
+/* ==========================================================================
+   Alertas
+   ========================================================================== */
+.alert {
+    border-radius: var(--gt-radius);
+    border: 1px solid transparent;
+}
+
+.alert-info {
+    background-color: rgba(87, 182, 255, 0.1);
+    border-color: rgba(87, 182, 255, 0.3);
+    color: #acd8ff;
+}
+
+.alert-warning {
+    background-color: rgba(255, 176, 32, 0.1);
+    border-color: rgba(255, 176, 32, 0.3);
+    color: #ffd58a;
+}
+
+.alert-danger {
+    background-color: rgba(255, 77, 94, 0.1);
+    border-color: rgba(255, 77, 94, 0.32);
+    color: #ffb3bb;
+}
+
+.alert-heading {
+    color: inherit;
+}
+
+/* ==========================================================================
+   Estado vacío (listados sin datos)
+   ========================================================================== */
+.gt-empty {
+    text-align: center;
+    padding: 3.5rem 1.5rem;
+    background-color: var(--gt-surface);
+    border: 1px dashed var(--gt-border-strong);
+    border-radius: var(--gt-radius);
+}
+
+.gt-empty .gt-empty-icon {
+    font-size: 2.75rem;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+    filter: grayscale(0.2);
+}
+
+.gt-empty h5 {
+    margin-bottom: 0.35rem;
+}
+
+.gt-empty p {
+    color: var(--gt-text-muted);
+    margin-bottom: 1.25rem;
+}
+
+/* Descripción de tipo "definición" (Detalle) */
+dt {
+    color: var(--gt-text-muted);
+    font-weight: 600;
+}
+
+dd {
+    color: var(--gt-text);
+}
+
+/* Tarjeta de métrica (chips de stats en Detalle de rutina) */
+.gt-stat {
+    background-color: var(--gt-surface-2);
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius-sm);
+    padding: 0.75rem 1rem;
+    text-align: center;
+}
+
+.gt-stat .gt-stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--gt-accent);
+    line-height: 1.1;
+}
+
+.gt-stat .gt-stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gt-text-dim);
+}
+
+/* ==========================================================================
+   Hero (Home)
+   ========================================================================== */
+.gt-hero {
+    position: relative;
+    border-radius: var(--gt-radius);
+    padding: clamp(2.5rem, 1.5rem + 5vw, 5rem) clamp(1.5rem, 1rem + 3vw, 3.5rem);
+    background:
+        radial-gradient(800px 400px at 90% 0%, rgba(197, 255, 46, 0.12), transparent 60%),
+        linear-gradient(135deg, var(--gt-surface) 0%, var(--gt-surface-2) 100%);
+    border: 1px solid var(--gt-border);
+    overflow: hidden;
+}
+
+.gt-hero h1 {
+    font-size: clamp(2rem, 1.4rem + 3vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+}
+
+.gt-hero .gt-hero-accent {
+    color: var(--gt-accent);
+}
+
+.gt-hero p.lead {
+    color: var(--gt-text-muted);
+    max-width: 36rem;
+    font-size: 1.1rem;
+}
+
+.gt-eyebrow {
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--gt-accent);
+    margin-bottom: 1rem;
+}
+
+/* Tarjeta de característica en Home */
+.gt-feature {
+    height: 100%;
+    text-align: left;
+}
+
+.gt-feature .gt-feature-icon {
+    font-size: 1.75rem;
+    width: 3rem;
+    height: 3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--gt-radius-sm);
+    background-color: var(--gt-accent-soft);
+    margin-bottom: 0.85rem;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    line-height: 60px;
+    background-color: rgba(21, 23, 28, 0.9);
+    border-top: 1px solid var(--gt-border);
+    color: var(--gt-text-muted);
+}
+
+.footer a {
+    color: var(--gt-accent);
+}
+
+.footer a:hover {
+    color: var(--gt-accent-dark);
 }
