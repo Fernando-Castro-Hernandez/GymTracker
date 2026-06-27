@@ -1,33 +1,32 @@
-﻿@model GymTracker.Models.Ejercicio
+@model GymTracker.Models.Ejercicio
 
 @{
     ViewData["Title"] = "Detalle del Ejercicio";
 }
 
-<div class="container mt-4">
+<div class="container mt-4" style="max-width: 760px;">
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-3">&larr; Volver a Mis Ejercicios</a>
+
     <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
             <h2 class="mb-0">@Model.Nombre</h2>
-            <span class="badge bg-secondary fs-6">@Model.GrupoMuscular</span>
+            <span class="gt-badge-grupo" data-grupo="@Model.GrupoMuscular">@Model.GrupoMuscular</span>
         </div>
         <div class="card-body">
-            <dl class="row">
+            <dl class="row mb-0">
                 <dt class="col-sm-3">Nombre</dt>
                 <dd class="col-sm-9">@Model.Nombre</dd>
 
-                <dt class="col-sm-3">Grupo Muscular</dt>
+                <dt class="col-sm-3">Grupo muscular</dt>
                 <dd class="col-sm-9">@Model.GrupoMuscular</dd>
 
                 <dt class="col-sm-3">Descripción</dt>
                 <dd class="col-sm-9">@(Model.Descripcion ?? "Sin descripción")</dd>
             </dl>
         </div>
-        <div class="card-footer d-flex justify-content-between">
-            <a asp-action="Index" class="btn btn-secondary">&larr; Volver</a>
-            <div>
-                <a asp-action="Editar" asp-route-id="@Model.Id" class="btn btn-primary">Editar</a>
-                <a asp-action="Eliminar" asp-route-id="@Model.Id" class="btn btn-danger">Eliminar</a>
-            </div>
+        <div class="card-footer d-flex justify-content-end gap-2">
+            <a asp-action="Editar" asp-route-id="@Model.Id" class="btn btn-primary">Editar</a>
+            <a asp-action="Eliminar" asp-route-id="@Model.Id" class="btn btn-outline-danger">Eliminar</a>
         </div>
     </div>
 </div>

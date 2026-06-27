@@ -1,23 +1,25 @@
-﻿@model GymTracker.Models.Ejercicio
+@model GymTracker.Models.Ejercicio
 
 @{
     ViewData["Title"] = "Eliminar Ejercicio";
 }
 
-<div class="container mt-4">
+<div class="container mt-4" style="max-width: 640px;">
     <div class="card border-danger">
-        <div class="card-header bg-danger text-white">
-            <h3 class="mb-0">¿Estás seguro de eliminar este ejercicio?</h3>
+        <div class="card-header">
+            <h3 class="mb-0 text-danger">¿Eliminar este ejercicio?</h3>
         </div>
         <div class="card-body">
-            <p>Esta acción no se puede deshacer.</p>
+            <p class="text-muted">Esta acción no se puede deshacer.</p>
 
-            <dl class="row">
+            <dl class="row mb-0">
                 <dt class="col-sm-3">Nombre</dt>
                 <dd class="col-sm-9">@Model.Nombre</dd>
 
-                <dt class="col-sm-3">Grupo Muscular</dt>
-                <dd class="col-sm-9">@Model.GrupoMuscular</dd>
+                <dt class="col-sm-3">Grupo muscular</dt>
+                <dd class="col-sm-9">
+                    <span class="gt-badge-grupo" data-grupo="@Model.GrupoMuscular">@Model.GrupoMuscular</span>
+                </dd>
 
                 <dt class="col-sm-3">Descripción</dt>
                 <dd class="col-sm-9">@(Model.Descripcion ?? "Sin descripción")</dd>
