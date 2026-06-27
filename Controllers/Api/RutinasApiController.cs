@@ -2,6 +2,7 @@
 using GymTracker.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using GymTracker.Services.Volumen;
 
 namespace GymTracker.Controllers.Api
 {
@@ -72,6 +73,40 @@ namespace GymTracker.Controllers.Api
             }
 
             return Ok(rutina);
+        }
+
+        // GET /api/rutinas/5/volumen?tipo=Simple
+        // Calcula el volumen de entrenamiento de una rutina usando
+        // el patron Strategy (la formula) + Factory Method (crea la estrategia).
+        [HttpGet("{id}/volumen")]
+        public async Task<ActionResult<VolumenDto>> GetVolumen(int id, TipoVolumen tipo = TipoVolumen.Simple)
+        {
+            // Traemos la rutina con sus ejercicios (incluyendo el Ejercicio,
+            // que la estrategia Relativa necesita para leer el grupo muscular)
+            var rutina = await context.Rutinas
+                .Include(r => r.Ejercicios)
+                    .ThenInclude(re => re.Ejercicio)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (rutina == null)
+            {
+                return NotFound();
+            }
+
+            // Factory Method: crea la estrategia adecuada segun el tipo pedido
+            var factory = new CalculoVolumenFactory();
+            ICalculoVolumen estrategia = factory.Crear(tipo);
+
+            // Strategy: ejecuta la formula correspondiente
+            double resultado = estrategia.Calcular(rutina.Ejercicios);
+
+            return Ok(new VolumenDto
+            {
+                RutinaId = rutina.Id,
+                NombreRutina = rutina.Nombre,
+                TipoCalculo = estrategia.Nombre,
+                Volumen = resultado
+            });
         }
     }
 }
