@@ -6,6 +6,15 @@
 # dotenv files
 .env
 
+# ===== Claude Code =====
+# Configuración local y de sesión de Claude Code (NO subir).
+.claude/
+.claude/settings.local.json
+ 
+# Mantener el contexto del proyecto SÍ versionado:
+!CLAUDE.md
+!.claude/settings.json
+
 # User-specific files
 *.rsuser
 *.suo
