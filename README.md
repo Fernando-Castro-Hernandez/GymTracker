@@ -1,37 +1,34 @@
-# GymTracker
+# GymTracker — Rama `04-api`
 
-Sistema personal de seguimiento de entrenamientos. Proyecto de la materia
-de Arquitectura de Software (TSU Desarrollo de Software, cuatrimestre
-mayo–agosto 2026).
+Esta rama incorpora una **API REST** al proyecto, partiendo del estado de `main`
+(MVC + ADR-01). La decisión completa está documentada en
+`docs/ADR/ADR-04-Fernando-Castro.md`.
 
-## Stack
+## ¿Qué se hizo?
 
-- ASP.NET Core 10 MVC
-- Entity Framework Core 10
-- PostgreSQL 16 (vía Docker)
-- ASP.NET Core Identity
-- Bootstrap 5
+- Se agregó una **API REST** con ASP.NET Core Web API que expone las entidades
+  **Ejercicio** y **Rutina** como endpoints HTTP que devuelven JSON.
+- Se configuró **Swagger (OpenAPI)** para documentar y probar los endpoints de
+  forma interactiva.
+- Las respuestas usan **DTOs** (no las entidades de EF Core directamente), para
+  evitar ciclos de serialización y mantener un JSON limpio.
 
-## Setup local
+## Endpoints
 
-1. Clonar el repositorio.
-2. Levantar PostgreSQL: `docker compose up -d`
-3. Aplicar migraciones: `dotnet ef database update`
-4. Correr el proyecto: `dotnet run` (o F5 en Visual Studio).
+```
+GET /api/ejercicios            → lista de ejercicios
+GET /api/ejercicios/{id}       → un ejercicio por id 
+GET /api/ejercicios?grupo=...  → lista filtrada por grupo muscular
+GET /api/rutinas               → lista de rutinas
+GET /api/rutinas/{id}          → una rutina por id 
+```
 
-## Declaración de IA
 
-## Declaración de uso de IA
 
-En el desarrollo de este proyecto utilicé **Claude** como apoyo. Su uso se limitó a:
+## Uso responsable de IA
 
-- Resolver dudas conceptuales sobre arquitectura de software (estilos arquitectónicos, vistas, trade-offs) y sobre el funcionamiento de una API REST.
-- Apoyo en la redacción y estructura de los ADR (Architecture Decision Records).
-- Ayuda para diagnosticar errores durante el desarrollo.
-
-Todas las decisiones de diseño, la revisión del código y la comprensión de lo implementado son propias. La IA se utilizó como herramienta de aprendizaje y apoyo técnico, no como sustituto del trabajo ni del criterio personal.
-
-## Autor
-
-Fernando Castro Hernández — TSU Desarrollo de Software
-Materia: Arquitectura de Software · Mayo–Agosto 2026
+En el desarrollo de esta rama se utilizó **Claude** como apoyo para
+entender conceptos, redactar el ADR y guiar la implementación paso a paso. Todo el
+código fue revisado, comprendido y probado por el autor, y las decisiones de
+diseño son propias. La IA se usó como asistente de aprendizaje, manteniendo la
+responsabilidad y la autoría del trabajo.
