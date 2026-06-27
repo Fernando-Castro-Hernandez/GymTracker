@@ -1,31 +1,37 @@
-﻿@model List<GymTracker.Models.Rutina>
+@model List<GymTracker.Models.Rutina>
 
 @{
     ViewData["Title"] = "Mis Rutinas";
 }
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Mis Rutinas</h1>
-        <a asp-action="Agregar" class="btn btn-primary">+ Agregar Rutina</a>
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title section-accent">Mis Rutinas</h1>
+            <p class="page-subtitle">Tus rutinas de entrenamiento con sus metas.</p>
+        </div>
+        <a asp-action="Agregar" class="btn btn-primary">+ Agregar rutina</a>
     </div>
 
     @if (!Model.Any())
     {
-        <div class="alert alert-info">
-            No tienes rutinas todavía. ¡Crea la primera!
+        <div class="gt-empty">
+            <div class="gt-empty-icon">📋</div>
+            <h5>No tienes rutinas todavía</h5>
+            <p>Crea tu primera rutina y empieza a planear tus entrenamientos.</p>
+            <a asp-action="Agregar" class="btn btn-primary">+ Crear mi primera rutina</a>
         </div>
     }
     else
     {
-        <div class="row">
+        <div class="row g-3">
             @foreach (var rutina in Model)
             {
-                <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="card h-100">
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 gt-card-link gt-card-accent">
                         <div class="card-body">
                             <h5 class="card-title">@rutina.Nombre</h5>
-                            <p class="card-text text-muted small">
+                            <p class="card-text text-muted small mb-2">
                                 Creada el @rutina.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy")
                             </p>
                             @if (!string.IsNullOrEmpty(rutina.Descripcion))
@@ -33,10 +39,10 @@
                                 <p class="card-text">@rutina.Descripcion</p>
                             }
                         </div>
-                        <div class="card-footer d-flex justify-content-between">
+                        <div class="card-footer d-flex justify-content-between align-items-center">
                             <a asp-action="Detalle" asp-route-id="@rutina.Id"
                                class="btn btn-sm btn-outline-primary">Ver</a>
-                            <div>
+                            <div class="btn-group">
                                 <a asp-action="Editar" asp-route-id="@rutina.Id"
                                    class="btn btn-sm btn-outline-secondary">Editar</a>
                                 <a asp-action="Eliminar" asp-route-id="@rutina.Id"

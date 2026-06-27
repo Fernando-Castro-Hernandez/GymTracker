@@ -1,20 +1,47 @@
-﻿@model GymTracker.Models.Rutina
+@model GymTracker.Models.Rutina
 
 @{
     ViewData["Title"] = $"Rutina - {Model.Nombre}";
+    var ejercicios = Model.Ejercicios.OrderBy(e => e.Orden).ToList();
+    var totalSeries = ejercicios.Sum(e => e.SeriesObjetivo);
+    var totalGrupos = ejercicios.Select(e => e.Ejercicio.GrupoMuscular).Distinct().Count();
 }
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-start mb-4">
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-3">&larr; Volver a Mis Rutinas</a>
+
+    <div class="d-flex flex-wrap gap-3 justify-content-between align-items-start mb-4">
         <div>
-            <h1>@Model.Nombre</h1>
-            <p class="text-muted">
+            <h1 class="page-title section-accent">@Model.Nombre</h1>
+            <p class="page-subtitle">
                 Creada el @Model.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
             </p>
         </div>
-        <div>
+        <div class="d-flex gap-2">
             <a asp-action="Editar" asp-route-id="@Model.Id" class="btn btn-primary">Editar</a>
-            <a asp-action="Eliminar" asp-route-id="@Model.Id" class="btn btn-danger">Eliminar</a>
+            <a asp-action="Eliminar" asp-route-id="@Model.Id" class="btn btn-outline-danger">Eliminar</a>
+        </div>
+    </div>
+
+    <!-- Métricas rápidas de la rutina -->
+    <div class="row g-3 mb-4">
+        <div class="col-4">
+            <div class="gt-stat">
+                <div class="gt-stat-value">@ejercicios.Count</div>
+                <div class="gt-stat-label">Ejercicios</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="gt-stat">
+                <div class="gt-stat-value">@totalSeries</div>
+                <div class="gt-stat-label">Series totales</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="gt-stat">
+                <div class="gt-stat-value">@totalGrupos</div>
+                <div class="gt-stat-label">Grupos musculares</div>
+            </div>
         </div>
     </div>
 
@@ -23,50 +50,49 @@
         <div class="card mb-4">
             <div class="card-body">
                 <h6 class="card-subtitle mb-2 text-muted">Descripción</h6>
-                <p class="card-text">@Model.Descripcion</p>
+                <p class="card-text mb-0">@Model.Descripcion</p>
             </div>
         </div>
     }
 
-    <h3>Ejercicios de esta rutina</h3>
+    <h3 class="section-accent mb-3">Ejercicios de esta rutina</h3>
 
-    @if (!Model.Ejercicios.Any())
+    @if (!ejercicios.Any())
     {
         <div class="alert alert-warning">
             Esta rutina no tiene ejercicios asignados todavía.
-            La asignación de ejercicios estará disponible en la siguiente versión.
         </div>
     }
     else
     {
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Ejercicio</th>
-                    <th>Grupo</th>
-                    <th class="text-center">Series</th>
-                    <th class="text-center">Reps</th>
-                    <th class="text-end">Peso (kg)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model.Ejercicios.OrderBy(e => e.Orden))
-                {
-                    <tr>
-                        <td>@(Model.Ejercicios.ToList().IndexOf(item) + 1)</td>
-                        <td><strong>@item.Ejercicio.Nombre</strong></td>
-                        <td><span class="badge bg-secondary">@item.Ejercicio.GrupoMuscular</span></td>
-                        <td class="text-center">@item.SeriesObjetivo</td>
-                        <td class="text-center">@item.RepeticionesObjetivo</td>
-                        <td class="text-end">@item.PesoObjetivo.ToString("0.##")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Ejercicio</th>
+                            <th>Grupo</th>
+                            <th class="text-center">Series</th>
+                            <th class="text-center">Reps</th>
+                            <th class="text-end">Peso (kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in ejercicios)
+                        {
+                            <tr>
+                                <td class="text-muted">@(ejercicios.IndexOf(item) + 1)</td>
+                                <td><strong>@item.Ejercicio.Nombre</strong></td>
+                                <td><span class="gt-badge-grupo" data-grupo="@item.Ejercicio.GrupoMuscular">@item.Ejercicio.GrupoMuscular</span></td>
+                                <td class="text-center">@item.SeriesObjetivo</td>
+                                <td class="text-center">@item.RepeticionesObjetivo</td>
+                                <td class="text-end">@item.PesoObjetivo.ToString("0.##")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
     }
-
-    <div class="mt-4">
-        <a asp-action="Index" class="btn btn-secondary">&larr; Volver a Mis Rutinas</a>
-    </div>
 </div>

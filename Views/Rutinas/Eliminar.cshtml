@@ -1,4 +1,4 @@
-﻿@model GymTracker.Models.Rutina
+@model GymTracker.Models.Rutina
 
 @{
     ViewData["Title"] = "Eliminar Rutina";
@@ -6,13 +6,13 @@
 
 <div class="container mt-4" style="max-width: 700px;">
     <div class="card border-danger">
-        <div class="card-header bg-danger text-white">
-            <h3 class="mb-0">¿Estás seguro de eliminar esta rutina?</h3>
+        <div class="card-header">
+            <h3 class="mb-0 text-danger">¿Eliminar esta rutina?</h3>
         </div>
         <div class="card-body">
-            <p>Esta acción no se puede deshacer. Todos los ejercicios asignados a esta rutina también se eliminarán.</p>
+            <p class="text-muted">Esta acción no se puede deshacer. Todos los ejercicios asignados a esta rutina también se eliminarán.</p>
 
-            <dl class="row">
+            <dl class="row mb-0">
                 <dt class="col-sm-3">Nombre</dt>
                 <dd class="col-sm-9">@Model.Nombre</dd>
 

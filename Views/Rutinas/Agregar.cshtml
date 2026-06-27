@@ -1,10 +1,10 @@
-﻿@{
+@{
     ViewData["Title"] = "Crear Rutina";
     var ejerciciosDisponibles = ViewBag.EjerciciosDisponibles as List<GymTracker.Models.Ejercicio> ?? new();
 }
 
 <div class="container mt-4" style="max-width: 900px;">
-    <h1>Crear Rutina</h1>
+    <h1 class="page-title section-accent mb-2">Crear rutina</h1>
 
     @if (!ejerciciosDisponibles.Any())
     {
@@ -12,16 +12,18 @@
             <h5 class="alert-heading">No tienes ejercicios en tu catálogo</h5>
             <p>Antes de crear una rutina, necesitas tener al menos un ejercicio en tu catálogo personal.</p>
             <hr />
-            <a asp-controller="Ejercicios" asp-action="Agregar" class="btn btn-primary">Crear mi primer ejercicio</a>
-            <a asp-action="Index" class="btn btn-secondary">Volver a Mis Rutinas</a>
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-controller="Ejercicios" asp-action="Agregar" class="btn btn-primary">Crear mi primer ejercicio</a>
+                <a asp-action="Index" class="btn btn-secondary">Volver a Mis Rutinas</a>
+            </div>
         </div>
     }
     else
     {
-        <p class="text-muted">Llena los datos de la rutina y agrega los ejercicios que la compondrán con sus metas (series, repeticiones y peso objetivo).</p>
+        <p class="text-muted mb-4">Llena los datos de la rutina y agrega los ejercicios que la compondrán con sus metas (series, repeticiones y peso objetivo).</p>
 
         <!-- Datos básicos de la rutina -->
-        <div class="card mt-4">
+        <div class="card mb-4">
             <div class="card-header"><strong>Datos de la rutina</strong></div>
             <div class="card-body">
                 <div class="mb-3">
@@ -29,7 +31,7 @@
                     <input type="text" id="rutina-nombre" class="form-control"
                            placeholder="Ej. Push - Lunes" maxlength="100" required />
                 </div>
-                <div class="mb-3">
+                <div class="mb-0">
                     <label for="rutina-descripcion" class="form-label">Descripción (opcional)</label>
                     <textarea id="rutina-descripcion" class="form-control" rows="2"
                               placeholder="Ej. Día de pecho, hombro y tríceps"></textarea>
@@ -38,7 +40,7 @@
         </div>
 
         <!-- Agregar ejercicio a la rutina -->
-        <div class="card mt-4">
+        <div class="card mb-4">
             <div class="card-header"><strong>Agregar ejercicio</strong></div>
             <div class="card-body">
                 <div class="row g-2 align-items-end">
@@ -51,17 +53,17 @@
                             }
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-2 col-4">
                         <label for="input-series" class="form-label">Series</label>
                         <input type="number" id="input-series" class="form-control"
                                min="1" max="20" value="3" />
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-2 col-4">
                         <label for="input-reps" class="form-label">Reps</label>
                         <input type="number" id="input-reps" class="form-control"
                                min="1" max="100" value="10" />
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-2 col-4">
                         <label for="input-peso" class="form-label">Peso (kg)</label>
                         <input type="number" id="input-peso" class="form-control"
                                min="0" max="9999" step="0.5" value="0" />
@@ -76,36 +78,38 @@
         </div>
 
         <!-- Tabla de ejercicios agregados -->
-        <div class="card mt-4">
+        <div class="card mb-4">
             <div class="card-header"><strong>Ejercicios en la rutina</strong></div>
             <div class="card-body p-0">
-                <table class="table mb-0" id="tabla-ejercicios">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Ejercicio</th>
-                            <th>Grupo</th>
-                            <th class="text-center">Series</th>
-                            <th class="text-center">Reps</th>
-                            <th class="text-end">Peso</th>
-                            <th class="text-center">Quitar</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-body">
-                        <tr id="fila-vacia">
-                            <td colspan="7" class="text-center text-muted py-4">
-                                Aún no has agregado ejercicios. La rutina se puede guardar vacía.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0" id="tabla-ejercicios">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Ejercicio</th>
+                                <th>Grupo</th>
+                                <th class="text-center">Series</th>
+                                <th class="text-center">Reps</th>
+                                <th class="text-end">Peso</th>
+                                <th class="text-center">Quitar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-body">
+                            <tr id="fila-vacia">
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    Aún no has agregado ejercicios. La rutina se puede guardar vacía.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <!-- Botones de acción -->
-        <div class="d-flex justify-content-between mt-4 mb-4">
+        <div class="d-flex justify-content-between mb-4">
             <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
-            <button type="button" id="btn-guardar" class="btn btn-primary">Guardar Rutina</button>
+            <button type="button" id="btn-guardar" class="btn btn-primary">Guardar rutina</button>
         </div>
 
         <!-- Mensajes de feedback -->
