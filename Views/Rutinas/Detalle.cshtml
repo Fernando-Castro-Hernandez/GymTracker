@@ -18,6 +18,13 @@
             </p>
         </div>
         <div class="d-flex gap-2">
+            @if (ejercicios.Any())
+            {
+                <form asp-controller="Sesiones" asp-action="Iniciar" method="post" class="d-inline">
+                    <input type="hidden" name="rutinaId" value="@Model.Id" />
+                    <button type="submit" class="btn btn-success">Iniciar entrenamiento</button>
+                </form>
+            }
             <a asp-action="Editar" asp-route-id="@Model.Id" class="btn btn-primary">Editar</a>
             <a asp-action="Eliminar" asp-route-id="@Model.Id" class="btn btn-outline-danger">Eliminar</a>
         </div>
