@@ -1,5 +1,6 @@
 ﻿using GymTracker.Data;
 using GymTracker.Models;
+using GymTracker.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ namespace GymTracker.Controllers
             var usuarioId = ObtenerUsuarioId();
 
             var sesiones = await context.Sesiones
+                .Include(s => s.Series)
                 .Where(s => s.UsuarioId == usuarioId)
                 .OrderByDescending(s => s.Fecha)
                 .ToListAsync();
@@ -93,13 +95,66 @@ namespace GymTracker.Controllers
 
             if (sesion == null) return NotFound();
 
-            // Ordenar las series para mostrarlas agrupadas por ejercicio y número.
-            sesion.Series = sesion.Series
-                .OrderBy(s => s.EjercicioId)
-                .ThenBy(s => s.NumeroSerie)
-                .ToList();
+            // Mapear la entidad a un ViewModel que solo expone lo editable.
+            var modelo = new RegistrarSesionViewModel
+            {
+                SesionId = sesion.Id,
+                NombreRutina = sesion.NombreRutina,
+                Fecha = sesion.Fecha,
+                Notas = sesion.Notas,
+                Series = sesion.Series
+                    .OrderBy(s => s.EjercicioId)
+                    .ThenBy(s => s.NumeroSerie)
+                    .Select(s => new SerieEditableViewModel
+                    {
+                        Id = s.Id,
+                        NombreEjercicio = s.NombreEjercicio,
+                        GrupoMuscular = s.GrupoMuscular.ToString(),
+                        NumeroSerie = s.NumeroSerie,
+                        RepeticionesObjetivo = s.RepeticionesObjetivo,
+                        PesoObjetivo = s.PesoObjetivo,
+                        RepeticionesReales = s.RepeticionesReales,
+                        PesoReal = s.PesoReal
+                    })
+                    .ToList()
+            };
 
-            return View(sesion);
+            return View(modelo);
+        }
+
+        // ===== Registrar POST: guarda los valores reales capturados =====
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Registrar(RegistrarSesionViewModel modelo)
+        {
+            var usuarioId = ObtenerUsuarioId();
+
+            // Cargar la sesión real CON sus series (rastreadas por EF Core).
+            var sesion = await context.Sesiones
+                .Include(s => s.Series)
+                .FirstOrDefaultAsync(s => s.Id == modelo.SesionId && s.UsuarioId == usuarioId);
+
+            if (sesion == null) return NotFound();
+
+            // Guardar las notas de la sesión.
+            sesion.Notas = modelo.Notas;
+
+            // Actualizar SOLO los valores reales de cada serie.
+            // Se busca cada serie por su Id dentro de las series de ESTA sesión,
+            // de modo que no se pueda tocar una serie de otra sesión/usuario.
+            foreach (var serieEditada in modelo.Series)
+            {
+                var serie = sesion.Series.FirstOrDefault(s => s.Id == serieEditada.Id);
+                if (serie == null) continue; // ignora ids que no pertenezcan a la sesión
+
+                serie.RepeticionesReales = serieEditada.RepeticionesReales;
+                serie.PesoReal = serieEditada.PesoReal;
+            }
+
+            await context.SaveChangesAsync();
+
+            // Ir al detalle de la sesión (solo lectura) para ver el resumen.
+            return RedirectToAction(nameof(Detalle), new { id = sesion.Id });
         }
 
         // ===== Detalle GET: ver una sesión pasada (solo lectura) =====

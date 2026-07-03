@@ -1,0 +1,52 @@
+﻿@model List<GymTracker.Models.Sesion>
+
+@{
+    ViewData["Title"] = "Historial de entrenamientos";
+}
+
+<div class="container mt-4">
+    <h1 class="page-title section-accent mb-1">Historial de entrenamientos</h1>
+    <p class="page-subtitle mb-4">Todas las sesiones que has registrado.</p>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            Aún no has registrado ningún entrenamiento. Ve a una de tus rutinas y presiona
+            <strong>"Iniciar entrenamiento"</strong> para empezar.
+            <div class="mt-3">
+                <a asp-controller="Rutinas" asp-action="Index" class="btn btn-primary">Ir a Mis Rutinas</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Rutina</th>
+                            <th>Fecha</th>
+                            <th class="text-center">Series</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sesion in Model)
+                        {
+                            <tr>
+                                <td><strong>@sesion.NombreRutina</strong></td>
+                                <td class="text-muted">@sesion.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="text-center">@sesion.Series.Count</td>
+                                <td class="text-end">
+                                    <a asp-action="Detalle" asp-route-id="@sesion.Id" class="btn btn-sm btn-outline-primary">Ver</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+

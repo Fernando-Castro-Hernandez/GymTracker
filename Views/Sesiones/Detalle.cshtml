@@ -1,0 +1,122 @@
+﻿@model GymTracker.Models.Sesion
+
+@{
+    ViewData["Title"] = $"Sesión - {Model.NombreRutina}";
+    var series = Model.Series
+        .OrderBy(s => s.EjercicioId)
+        .ThenBy(s => s.NumeroSerie)
+        .ToList();
+    var grupos = series.GroupBy(s => s.NombreEjercicio).ToList();
+
+    var totalSeries = series.Count;
+    var volumenTotal = series.Sum(s => s.RepeticionesReales * s.PesoReal);
+    var seriesQueSuperaronMeta = series.Count(s =>
+        s.RepeticionesReales > s.RepeticionesObjetivo || s.PesoReal > s.PesoObjetivo);
+}
+
+<div class="container mt-4" style="max-width: 900px;">
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-3">&larr; Volver al historial</a>
+
+    <div class="d-flex flex-wrap gap-3 justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="page-title section-accent">@Model.NombreRutina</h1>
+            <p class="page-subtitle">
+                @Model.Fecha.ToLocalTime().ToString("dddd, dd 'de' MMMM 'de' yyyy - HH:mm")
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Registrar" asp-route-id="@Model.Id" class="btn btn-primary">Editar registro</a>
+            <form asp-action="Eliminar" method="post" class="d-inline"
+                  onsubmit="return confirm('¿Eliminar esta sesión? Esta acción no se puede deshacer.');">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-outline-danger">Eliminar</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-4">
+            <div class="gt-stat">
+                <div class="gt-stat-value">@totalSeries</div>
+                <div class="gt-stat-label">Series realizadas</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="gt-stat">
+                <div class="gt-stat-value">@volumenTotal.ToString("0.##")</div>
+                <div class="gt-stat-label">Volumen total (kg)</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="gt-stat">
+                <div class="gt-stat-value">@seriesQueSuperaronMeta</div>
+                <div class="gt-stat-label">Series sobre meta</div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Notas))
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Notas</h6>
+                <p class="card-text mb-0">@Model.Notas</p>
+            </div>
+        </div>
+    }
+
+    @foreach (var grupo in grupos)
+    {
+        var primera = grupo.First();
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>@grupo.Key</strong>
+                <span class="gt-badge-grupo" data-grupo="@primera.GrupoMuscular">@primera.GrupoMuscular</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Serie</th>
+                            <th class="text-center">Meta</th>
+                            <th class="text-center">Realizado</th>
+                            <th class="text-center">Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var serie in grupo)
+                        {
+                            var superoReps = serie.RepeticionesReales > serie.RepeticionesObjetivo;
+                            var superoPeso = serie.PesoReal > serie.PesoObjetivo;
+                            var cumplio = serie.RepeticionesReales >= serie.RepeticionesObjetivo
+                                          && serie.PesoReal >= serie.PesoObjetivo;
+                            <tr>
+                                <td class="text-muted">#@serie.NumeroSerie</td>
+                                <td class="text-center text-muted">
+                                    @serie.RepeticionesObjetivo &times; @serie.PesoObjetivo.ToString("0.##") kg
+                                </td>
+                                <td class="text-center">
+                                    <strong>@serie.RepeticionesReales &times; @serie.PesoReal.ToString("0.##") kg</strong>
+                                </td>
+                                <td class="text-center">
+                                    @if (superoReps || superoPeso)
+                                    {
+                                        <span class="badge bg-success">Superó meta</span>
+                                    }
+                                    else if (cumplio)
+                                    {
+                                        <span class="badge bg-primary">Cumplió</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Bajo meta</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
