@@ -22,6 +22,8 @@ builder.Services.AddControllersWithViews()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddScoped<GymTracker.Services.Progreso.ProgresoService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
