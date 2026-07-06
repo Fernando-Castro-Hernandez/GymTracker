@@ -1,0 +1,140 @@
+﻿@model List<GymTracker.Models.Ejercicio>
+
+@{
+    ViewData["Title"] = "Progreso";
+}
+
+<div class="container mt-4">
+    <h1 class="page-title section-accent mb-1">Mi progreso</h1>
+    <p class="page-subtitle mb-4">Visualiza tu evolución a lo largo del tiempo.</p>
+
+    <!-- Gráfica A: Peso corporal -->
+    <div class="card mb-4">
+        <div class="card-header"><strong>Evolución del peso corporal</strong></div>
+        <div class="card-body">
+            <div id="peso-vacio" class="text-muted text-center py-4 d-none">
+                Aún no tienes mediciones registradas.
+                <a asp-controller="Mediciones" asp-action="Crear">Registra una medición</a>.
+            </div>
+            <canvas id="grafica-peso" height="100"></canvas>
+        </div>
+    </div>
+
+    <!-- Gráfica C: Volumen por sesión -->
+    <div class="card mb-4">
+        <div class="card-header"><strong>Volumen total por entrenamiento</strong></div>
+        <div class="card-body">
+            <div id="volumen-vacio" class="text-muted text-center py-4 d-none">
+                Aún no tienes entrenamientos registrados.
+                <a asp-controller="Rutinas" asp-action="Index">Inicia un entrenamiento</a>.
+            </div>
+            <canvas id="grafica-volumen" height="100"></canvas>
+        </div>
+    </div>
+
+    <!-- Gráfica B: Progresión de un ejercicio -->
+    <div class="card mb-4">
+        <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <strong>Progresión de carga por ejercicio</strong>
+            @if (Model.Any())
+            {
+                <select id="selector-ejercicio" class="form-select" style="max-width: 280px;">
+                    @foreach (var ej in Model)
+                    {
+                        <option value="@ej.Id">@ej.Nombre</option>
+                    }
+                </select>
+            }
+        </div>
+        <div class="card-body">
+            @if (!Model.Any())
+            {
+                <div class="text-muted text-center py-4">
+                    No tienes ejercicios en tu catálogo.
+                </div>
+            }
+            else
+            {
+                <div id="ejercicio-vacio" class="text-muted text-center py-4 d-none">
+                    Este ejercicio aún no tiene datos en tus entrenamientos.
+                </div>
+                <canvas id="grafica-ejercicio" height="100"></canvas>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/chart/chart.min.js"></script>
+    <script>
+        // Color de acento de la app (verde neón del rediseño).
+        const acento = getComputedStyle(document.documentElement)
+        .getPropertyValue('--gt-accent')?.trim() || '#b6f500';
+
+        // ===== Helper genérico: pinta una gráfica de línea =====
+        async function pintarGrafica(url, canvasId, vacioId, etiqueta) {
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+        const datos = await resp.json();
+
+        const canvas = document.getElementById(canvasId);
+        const vacio = vacioId ? document.getElementById(vacioId) : null;
+
+        // Si no hay datos, mostrar el mensaje de vacío y ocultar el canvas.
+        if (!datos || datos.length === 0) {
+        if (vacio) vacio.classList.remove('d-none');
+        if (canvas) canvas.classList.add('d-none');
+        return null;
+        }
+        if (vacio) vacio.classList.add('d-none');
+        if (canvas) canvas.classList.remove('d-none');
+
+        return new Chart(canvas, {
+        type: 'line',
+        data: {
+        labels: datos.map(d => d.fecha),
+        datasets: [{
+        label: etiqueta,
+        data: datos.map(d => d.valor),
+        borderColor: acento,
+        backgroundColor: acento + '33',
+        tension: 0.25,
+        fill: true,
+        pointRadius: 4
+        }]
+        },
+        options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#e5e5e5' } } },
+        scales: {
+        x: { ticks: { color: '#a0a0a0' }, grid: { color: '#2a2a2a' } },
+        y: { ticks: { color: '#a0a0a0' }, grid: { color: '#2a2a2a' } }
+        }
+        }
+        });
+        }
+
+        // Gráfica A y C se cargan una sola vez.
+        pintarGrafica('/api/progreso/peso', 'grafica-peso', 'peso-vacio', 'Peso (kg)');
+        pintarGrafica('/api/progreso/volumen', 'grafica-volumen', 'volumen-vacio', 'Volumen (kg)');
+
+        // Gráfica B: depende del ejercicio seleccionado; se redibuja al cambiar.
+        const selector = document.getElementById('selector-ejercicio');
+        let graficaEjercicio = null;
+
+        async function cargarEjercicio() {
+        if (!selector) return;
+        const id = selector.value;
+        // Destruir la gráfica anterior antes de crear la nueva.
+        if (graficaEjercicio) { graficaEjercicio.destroy(); graficaEjercicio = null; }
+        graficaEjercicio = await pintarGrafica(
+        '/api/progreso/ejercicio/' + id,
+        'grafica-ejercicio', 'ejercicio-vacio', 'Peso máx. (kg)');
+        }
+
+        if (selector) {
+        selector.addEventListener('change', cargarEjercicio);
+        cargarEjercicio(); // cargar el primero al abrir la página
+        }
+    </script>
+}
