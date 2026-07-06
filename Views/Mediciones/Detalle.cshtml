@@ -1,0 +1,99 @@
+﻿@model GymTracker.Models.Medicion
+
+@{
+    ViewData["Title"] = "Detalle de medición";
+    Func<decimal?, string, string> v = (x, u) => x.HasValue ? $"{x.Value.ToString("0.##")} {u}" : "—";
+}
+
+<div class="container mt-4" style="max-width: 800px;">
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-3">&larr; Volver al historial</a>
+
+    <div class="d-flex flex-wrap gap-3 justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="page-title section-accent">@Model.Fecha.ToLocalTime().ToString("dd 'de' MMMM 'de' yyyy")</h1>
+            <p class="page-subtitle">@Model.Fecha.ToLocalTime().ToString("HH:mm")</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Editar" asp-route-id="@Model.Id" class="btn btn-primary">Editar</a>
+            <form asp-action="Eliminar" method="post" class="d-inline"
+                  onsubmit="return confirm('¿Eliminar esta medición? Esta acción no se puede deshacer.');">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-outline-danger">Eliminar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Peso destacado -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="gt-stat">
+                <div class="gt-stat-value">@Model.Peso.ToString("0.##") kg</div>
+                <div class="gt-stat-label">Peso corporal</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Composición corporal -->
+    <div class="card mb-4">
+        <div class="card-header"><strong>Composición corporal</strong></div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3 col-6">
+                    <div class="text-muted small">% Grasa</div>
+                    <div class="fs-5">@v(Model.PorcentajeGrasa, "%")</div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="text-muted small">Grasa visceral</div>
+                    <div class="fs-5">@v(Model.GrasaVisceral, "")</div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="text-muted small">Masa muscular</div>
+                    <div class="fs-5">@v(Model.MasaMuscular, "kg")</div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="text-muted small">% Agua</div>
+                    <div class="fs-5">@v(Model.PorcentajeAgua, "%")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medidas corporales -->
+    <div class="card mb-4">
+        <div class="card-header"><strong>Medidas corporales (cm)</strong></div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4 col-6">
+                    <div class="text-muted small">Cintura</div>
+                    <div class="fs-5">@v(Model.Cintura, "cm")</div>
+                </div>
+                <div class="col-md-4 col-6">
+                    <div class="text-muted small">Cadera</div>
+                    <div class="fs-5">@v(Model.Cadera, "cm")</div>
+                </div>
+                <div class="col-md-4 col-6">
+                    <div class="text-muted small">Pecho</div>
+                    <div class="fs-5">@v(Model.Pecho, "cm")</div>
+                </div>
+                <div class="col-md-4 col-6">
+                    <div class="text-muted small">Brazo</div>
+                    <div class="fs-5">@v(Model.Brazo, "cm")</div>
+                </div>
+                <div class="col-md-4 col-6">
+                    <div class="text-muted small">Muslo</div>
+                    <div class="fs-5">@v(Model.Muslo, "cm")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Notas))
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Notas</h6>
+                <p class="card-text mb-0">@Model.Notas</p>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,113 @@
+﻿@model GymTracker.Models.Medicion
+
+@{
+    ViewData["Title"] = "Nueva medición";
+}
+
+<div class="container mt-4" style="max-width: 800px;">
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-3">&larr; Volver al historial</a>
+
+    <h1 class="page-title section-accent mb-1">Nueva medición</h1>
+    <p class="text-muted mb-4">
+        Solo el peso es obligatorio. Registra lo que hayas medido; los demás campos son opcionales.
+    </p>
+
+    <form asp-action="Crear" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <!-- Sección 1: Peso y fecha (obligatorio) -->
+        <div class="card mb-4">
+            <div class="card-header"><strong>Peso y fecha</strong></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="Fecha" class="form-label">Fecha</label>
+                        <input asp-for="Fecha" type="datetime-local" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Peso" class="form-label">Peso (kg) *</label>
+                        <input asp-for="Peso" type="number" step="0.01" min="0" class="form-control" required />
+                        <span asp-validation-for="Peso" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 2: Composición corporal (opcional) -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Composición corporal</strong>
+                <small class="text-muted">— de báscula de bioimpedancia (opcional)</small>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3 col-6">
+                        <label asp-for="PorcentajeGrasa" class="form-label">% Grasa Corporal</label>
+                        <input asp-for="PorcentajeGrasa" type="number" step="0.01" min="0" class="form-control" placeholder="—" />
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <label asp-for="GrasaVisceral" class="form-label">Grasa visceral</label>
+                        <input asp-for="GrasaVisceral" type="number" step="0.01" min="0" class="form-control" placeholder="—" />
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <label asp-for="MasaMuscular" class="form-label">Masa muscular (kg)</label>
+                        <input asp-for="MasaMuscular" type="number" step="0.01" min="0" class="form-control" placeholder="—" />
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <label asp-for="PorcentajeAgua" class="form-label">% Agua</label>
+                        <input asp-for="PorcentajeAgua" type="number" step="0.01" min="0" class="form-control" placeholder="—" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 3: Medidas con cinta (opcional) -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Medidas corporales</strong>
+                <small class="text-muted">— con cinta métrica, en cm (opcional)</small>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4 col-6">
+                        <label asp-for="Cintura" class="form-label">Cintura</label>
+                        <input asp-for="Cintura" type="number" step="0.01" min="0" class="form-control" placeholder="—" />
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <label asp-for="Cadera" class="form-label">Cadera</label>
+                        <input asp-for="Cadera" type="number" step="0.01" min="0" class="form-control" placeholder="—" />
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <label asp-for="Pecho" class="form-label">Pecho</label>
+                        <input asp-for="Pecho" type="number" step="0.01" min="0" class="form-control" placeholder="—" />
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <label asp-for="Brazo" class="form-label">Brazo</label>
+                        <input asp-for="Brazo" type="number" step="0.01" min="0" class="form-control" placeholder="—" />
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <label asp-for="Muslo" class="form-label">Muslo</label>
+                        <input asp-for="Muslo" type="number" step="0.01" min="0" class="form-control" placeholder="—" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notas -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <label asp-for="Notas" class="form-label">Notas (opcional)</label>
+                <textarea asp-for="Notas" class="form-control" rows="2" placeholder="Ej: medición en ayunas, post-vacaciones..."></textarea>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between mb-5">
+            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-success">Guardar medición</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

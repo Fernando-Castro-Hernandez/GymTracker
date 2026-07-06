@@ -11,6 +11,7 @@ namespace GymTracker.Data
         public DbSet<RutinaEjercicio> RutinasEjercicios { get; set; }
         public DbSet<Sesion> Sesiones { get; set; }
         public DbSet<SerieRealizada> SeriesRealizadas { get; set; }
+        public DbSet<Medicion> Mediciones { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -64,6 +65,19 @@ namespace GymTracker.Data
             // Por eso tampoco hay EjercicioId como FK en SerieRealizada: solo se
             // guarda como dato de trazabilidad, no como relación con integridad
             // referencial que impida borrar el ejercicio.
+
+            // ===== Precisión de los campos decimales de Medicion =====
+            // Todos usan numeric(6,2): hasta 9999.99, suficiente para kg, % y cm.
+            builder.Entity<Medicion>().Property(m => m.Peso).HasPrecision(6, 2);
+            builder.Entity<Medicion>().Property(m => m.PorcentajeGrasa).HasPrecision(6, 2);
+            builder.Entity<Medicion>().Property(m => m.GrasaVisceral).HasPrecision(6, 2);
+            builder.Entity<Medicion>().Property(m => m.MasaMuscular).HasPrecision(6, 2);
+            builder.Entity<Medicion>().Property(m => m.PorcentajeAgua).HasPrecision(6, 2);
+            builder.Entity<Medicion>().Property(m => m.Cintura).HasPrecision(6, 2);
+            builder.Entity<Medicion>().Property(m => m.Cadera).HasPrecision(6, 2);
+            builder.Entity<Medicion>().Property(m => m.Pecho).HasPrecision(6, 2);
+            builder.Entity<Medicion>().Property(m => m.Brazo).HasPrecision(6, 2);
+            builder.Entity<Medicion>().Property(m => m.Muslo).HasPrecision(6, 2);
         }
     }
 }
