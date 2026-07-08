@@ -150,7 +150,7 @@ pensado para una audiencia distinta.
   grandes se compone? Aplicaciones, base de datos y cómo se comunican.
 - **[Diagrama C4 — Nivel 3: Componentes](./docs/DiagramaC3.md)** — ¿Qué hay dentro
   de la aplicación web? Controllers, servicios y acceso a datos.
-Más detalle en el [README de documentación](./docs/README.md).
+Más detalle en el [README de documentación](./docs/C4-README.md).
  
 ---
  
