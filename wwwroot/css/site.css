@@ -677,7 +677,6 @@ dd {
 }
 
 .gt-feature .gt-feature-icon {
-    font-size: 1.75rem;
     width: 3rem;
     height: 3rem;
     display: inline-flex;
@@ -812,5 +811,165 @@ dd {
 
     tr:hover .gt-acciones {
         opacity: 1;
+    }
+}
+
+/* ===== Tarjetas de acción clickeables (dashboard de la landing) =====
+   Toda la tarjeta es un enlace; el icono es SVG (sin emojis). */
+.gt-nav-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 100%;
+    padding: 1.25rem;
+    border-radius: var(--gt-radius);
+    background-color: var(--gt-surface);
+    border: 1px solid var(--gt-border);
+    color: var(--gt-text);
+    text-decoration: none;
+    transition: all 0.18s ease;
+}
+
+    .gt-nav-card:hover {
+        border-color: var(--gt-accent);
+        background-color: var(--gt-surface-2);
+        transform: translateY(-2px);
+        box-shadow: var(--gt-shadow-hover);
+        color: var(--gt-text);
+    }
+
+    .gt-nav-card .gt-nav-icon {
+        flex-shrink: 0;
+        width: 2.75rem;
+        height: 2.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--gt-radius-sm);
+        background-color: var(--gt-accent-soft);
+        color: var(--gt-accent);
+    }
+
+        .gt-nav-card .gt-nav-icon svg {
+            width: 22px;
+            height: 22px;
+        }
+
+    .gt-nav-card .gt-nav-title {
+        font-family: var(--gt-font-display);
+        font-weight: 700;
+        font-size: 1.15rem;
+        text-transform: uppercase;
+        letter-spacing: 0.01em;
+        line-height: 1;
+        margin-bottom: 0.15rem;
+    }
+
+    .gt-nav-card .gt-nav-desc {
+        font-size: 0.85rem;
+        color: var(--gt-text-muted);
+        margin: 0;
+    }
+
+/* Icono SVG en las feature-cards (reemplaza los emojis). */
+.gt-feature .gt-feature-icon svg {
+    width: 26px;
+    height: 26px;
+    color: var(--gt-accent);
+}
+
+/* ===== Hero compacto para usuario logueado, con CTA de entrenar al lado ===== */
+.gt-hero-logged {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 1.5rem;
+    align-items: stretch;
+    margin-bottom: 1.5rem;
+}
+
+    .gt-hero-logged .gt-hero-text {
+        padding: 1.75rem 2rem;
+        border-radius: var(--gt-radius);
+        background: linear-gradient(135deg, var(--gt-surface) 0%, var(--gt-bg) 100%);
+        border: 1px solid var(--gt-border);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+        .gt-hero-logged .gt-hero-text .gt-eyebrow {
+            margin-bottom: 0.5rem;
+        }
+
+        .gt-hero-logged .gt-hero-text h1 {
+            font-family: var(--gt-font-display);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: clamp(1.8rem, 1.2rem + 2vw, 2.6rem);
+            line-height: 1.02;
+            margin-bottom: 0.6rem;
+        }
+
+        .gt-hero-logged .gt-hero-text p {
+            color: var(--gt-text-muted);
+            margin: 0;
+            max-width: 42ch;
+        }
+
+/* Tarjeta CTA "Entrenar": toda clickeable, lleva a elegir rutina. */
+.gt-entrenar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.75rem;
+    border-radius: var(--gt-radius);
+    background: radial-gradient(120% 120% at 100% 0%, var(--gt-accent-soft) 0%, transparent 55%), var(--gt-surface);
+    border: 1px solid var(--gt-accent);
+    color: var(--gt-text);
+    text-decoration: none;
+    overflow: hidden;
+    transition: all 0.18s ease;
+}
+
+    .gt-entrenar:hover {
+        background: radial-gradient(120% 120% at 100% 0%, var(--gt-accent-soft) 0%, transparent 45%), var(--gt-surface-2);
+        transform: translateY(-2px);
+        box-shadow: var(--gt-shadow-hover);
+        color: var(--gt-text);
+    }
+
+    .gt-entrenar .gt-entrenar-title {
+        font-family: var(--gt-font-display);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 2.4rem;
+        line-height: 1;
+        color: var(--gt-accent);
+        letter-spacing: 0.01em;
+        margin-bottom: 0.4rem;
+    }
+
+    .gt-entrenar .gt-entrenar-desc {
+        color: var(--gt-text-muted);
+        margin: 0;
+    }
+
+    .gt-entrenar .gt-entrenar-arrow {
+        position: absolute;
+        top: 1.5rem;
+        right: 1.5rem;
+        color: var(--gt-accent);
+        transition: transform 0.18s ease;
+    }
+
+    .gt-entrenar:hover .gt-entrenar-arrow {
+        transform: translate(3px, -3px);
+    }
+
+/* En pantallas chicas, apilar. */
+@media (max-width: 767px) {
+    .gt-hero-logged {
+        grid-template-columns: 1fr;
     }
 }
