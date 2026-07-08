@@ -5,34 +5,50 @@
    fuerza. Construido sobre Bootstrap 5 (solo capa visual).
    ========================================================================== */
 
+/* ===== Tipografía display: Saira Condensed (self-hosted) ===== */
+@font-face {
+    font-family: "Saira Condensed";
+    src: url("../fonts/saira-condensed-v12-latin-600.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Saira Condensed";
+    src: url("../fonts/saira-condensed-v12-latin-700.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+
 :root {
     /* ----- Paleta ----- */
-    --gt-bg: #15171c;            /* fondo dominante (casi negro, frío) */
-    --gt-surface: #1d2027;       /* tarjetas / superficies elevadas */
-    --gt-surface-2: #252932;     /* superficie secundaria / hover */
-    --gt-border: #2e333d;        /* bordes sutiles */
+    --gt-bg: #15171c; /* fondo dominante (casi negro, frío) */
+    --gt-surface: #1d2027; /* tarjetas / superficies elevadas */
+    --gt-surface-2: #252932; /* superficie secundaria / hover */
+    --gt-border: #2e333d; /* bordes sutiles */
     --gt-border-strong: #3a414d;
-
-    --gt-accent: #c5ff2e;        /* acento principal: lima eléctrico (energía) */
-    --gt-accent-dark: #a6e000;   /* acento presionado */
+    --gt-accent: #c5ff2e; /* acento principal: lima eléctrico (energía) */
+    --gt-accent-dark: #a6e000; /* acento presionado */
     --gt-accent-soft: rgba(197, 255, 46, 0.14);
-    --gt-secondary: #ff6a3d;     /* secundario cálido (naranja fuerza) */
+    --gt-secondary: #ff6a3d; /* secundario cálido (naranja fuerza) */
 
-    --gt-text: #eef1f5;          /* texto principal alto contraste */
-    --gt-text-muted: #99a1ad;    /* texto secundario */
-    --gt-text-dim: #6b7280;      /* texto terciario / metadatos */
+    --gt-text: #eef1f5; /* texto principal alto contraste */
+    --gt-text-muted: #99a1ad; /* texto secundario */
+    --gt-text-dim: #6b7280; /* texto terciario / metadatos */
 
     --gt-danger: #ff4d5e;
     --gt-warning: #ffb020;
     --gt-success: #34d399;
-
     /* ----- Forma y elevación ----- */
     --gt-radius: 0.85rem;
+    --gt-font-display: "Saira Condensed", "Segoe UI", system-ui, sans-serif;
     --gt-radius-sm: 0.55rem;
     --gt-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
     --gt-shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
     --gt-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.45);
-
     /* Sobrescribe variables de Bootstrap para coherencia global */
     --bs-body-bg: var(--gt-bg);
     --bs-body-color: var(--gt-text);
@@ -89,7 +105,11 @@ a {
 
 /* Encabezado de página reutilizable */
 .page-title {
-    font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.25rem);
+    font-family: var(--gt-font-display);
+    font-weight: 700;
+    font-size: clamp(1.9rem, 1.3rem + 2vw, 2.7rem);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     margin-bottom: 0.15rem;
 }
 
@@ -126,13 +146,14 @@ a {
 }
 
 .gt-navbar .navbar-brand {
-    font-weight: 800;
-    font-size: 1.35rem;
-    letter-spacing: -0.02em;
+    font-family: var(--gt-font-display);
+    font-weight: 700;
+    font-size: 1.6rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
     color: var(--gt-text);
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
 }
 
 .gt-navbar .navbar-brand .brand-mark {
@@ -456,61 +477,65 @@ a {
     color: var(--gt-text);
 }
 
-/* ==========================================================================
-   Badges — grupos musculares con color por grupo
-   ========================================================================== */
-.badge {
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    padding: 0.4em 0.7em;
-    border-radius: 999px;
-}
-
-/* Bootstrap genérico, reforzado para fondo oscuro */
-.badge.bg-secondary {
-    background-color: var(--gt-surface-2) !important;
-    color: var(--gt-text) !important;
-    border: 1px solid var(--gt-border-strong);
-}
-
-.badge.bg-warning {
-    background-color: rgba(255, 176, 32, 0.18) !important;
-    color: var(--gt-warning) !important;
-    border: 1px solid rgba(255, 176, 32, 0.35);
-}
-
-/* Badge de grupo muscular: usar .gt-badge-grupo + data-grupo en la vista.
-   El selector por atributo colorea cada grupo de forma consistente. */
+/* Tag de grupo muscular: chip con acento lateral de color según el grupo.
+   Coherente con el lenguaje de .section-accent (barra de color a la izquierda).
+   El color por grupo se define en la variable --grupo-color más abajo. */
 .gt-badge-grupo {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 0.35em;
-    padding: 0.4em 0.75em;
-    border-radius: 999px;
-    font-weight: 700;
-    font-size: 0.78rem;
-    letter-spacing: 0.02em;
-    background-color: var(--gt-surface-2);
+    padding: 0.3em 0.7em 0.3em 0.9em;
+    border-radius: var(--gt-radius-sm);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: var(--gt-text);
-    border: 1px solid var(--gt-border-strong);
+    background-color: var(--gt-surface-2);
+    border: 1px solid var(--gt-border);
+    overflow: hidden;
 }
 
-.gt-badge-grupo::before {
-    content: "";
-    width: 0.55em;
-    height: 0.55em;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: 0.9;
-}
+    /* La barra de acento lateral toma el color del grupo. */
+    .gt-badge-grupo::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--grupo-color, var(--gt-text-muted));
+    }
 
-.gt-badge-grupo[data-grupo="Pecho"]   { color: #ff7a8a; border-color: rgba(255, 122, 138, 0.4); background: rgba(255, 122, 138, 0.12); }
-.gt-badge-grupo[data-grupo="Espalda"] { color: #57b6ff; border-color: rgba(87, 182, 255, 0.4);  background: rgba(87, 182, 255, 0.12); }
-.gt-badge-grupo[data-grupo="Pierna"]  { color: #c5ff2e; border-color: rgba(197, 255, 46, 0.4);  background: rgba(197, 255, 46, 0.12); }
-.gt-badge-grupo[data-grupo="Hombro"]  { color: #ffb020; border-color: rgba(255, 176, 32, 0.4);  background: rgba(255, 176, 32, 0.12); }
-.gt-badge-grupo[data-grupo="Brazo"]   { color: #ff6a3d; border-color: rgba(255, 106, 61, 0.4);  background: rgba(255, 106, 61, 0.12); }
-.gt-badge-grupo[data-grupo="Core"]    { color: #b794ff; border-color: rgba(183, 148, 255, 0.4); background: rgba(183, 148, 255, 0.12); }
-.gt-badge-grupo[data-grupo="Cardio"]  { color: #34d399; border-color: rgba(52, 211, 153, 0.4);  background: rgba(52, 211, 153, 0.12); }
+    /* Cada grupo define su color en una sola variable, y de ahí sale la barra
+   lateral y un tinte muy sutil de fondo. */
+    .gt-badge-grupo[data-grupo="Pecho"] {
+        --grupo-color: #ff7a8a;
+    }
+
+    .gt-badge-grupo[data-grupo="Espalda"] {
+        --grupo-color: #57b6ff;
+    }
+
+    .gt-badge-grupo[data-grupo="Pierna"] {
+        --grupo-color: #c5ff2e;
+    }
+
+    .gt-badge-grupo[data-grupo="Hombro"] {
+        --grupo-color: #ffb020;
+    }
+
+    .gt-badge-grupo[data-grupo="Brazo"] {
+        --grupo-color: #ff6a3d;
+    }
+
+    .gt-badge-grupo[data-grupo="Core"] {
+        --grupo-color: #b794ff;
+    }
+
+    .gt-badge-grupo[data-grupo="Cardio"] {
+        --grupo-color: #34d399;
+    }
 
 /* ==========================================================================
    Alertas
@@ -589,10 +614,12 @@ dd {
 }
 
 .gt-stat .gt-stat-value {
-    font-size: 1.5rem;
-    font-weight: 800;
+    font-family: var(--gt-font-display);
+    font-size: 2.1rem;
+    font-weight: 700;
     color: var(--gt-accent);
-    line-height: 1.1;
+    line-height: 1;
+    letter-spacing: 0.01em;
 }
 
 .gt-stat .gt-stat-label {
@@ -680,4 +707,110 @@ dd {
 
 .footer a:hover {
     color: var(--gt-accent-dark);
+}
+
+/* ===== Tag de resultado (historial de series): barra de progreso mini =====
+   Refleja el cumplimiento real vs meta. El ancho de relleno se pasa desde la
+   vista con --pct (0 a 100) y el color con la clase de estado. */
+.gt-resultado {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.25em;
+    min-width: 84px;
+}
+
+.gt-resultado-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--gt-text-muted);
+}
+
+.gt-resultado-barra {
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    background-color: var(--gt-surface-2);
+    overflow: hidden;
+}
+
+    .gt-resultado-barra::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: var(--pct, 0%);
+        border-radius: 999px;
+        background: var(--gt-resultado-color, var(--gt-text-muted));
+        transition: width 0.4s ease;
+    }
+
+/* Estados: color según desempeño. */
+.gt-resultado.supero {
+    --gt-resultado-color: var(--gt-accent);
+}
+
+.gt-resultado.cumplio {
+    --gt-resultado-color: #57b6ff;
+}
+
+.gt-resultado.bajo {
+    --gt-resultado-color: var(--gt-text-dim);
+}
+
+
+/* ===== Acciones de fila: aparecen al hacer hover (solo en dispositivos con
+   hover real; en táctil se muestran siempre). Reemplaza el patrón de tres
+   botones de texto siempre visibles. ===== */
+.gt-acciones {
+    display: inline-flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.gt-accion {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--gt-radius-sm);
+    border: 1px solid var(--gt-border);
+    background-color: var(--gt-surface-2);
+    color: var(--gt-text-muted);
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+    .gt-accion:hover {
+        color: var(--gt-text);
+        border-color: var(--gt-border-strong);
+        background-color: var(--gt-surface);
+        transform: translateY(-1px);
+    }
+
+    /* La acción de eliminar se tiñe de rojo al hover, como señal de peligro. */
+    .gt-accion.gt-accion-danger:hover {
+        color: var(--gt-danger);
+        border-color: var(--gt-danger);
+    }
+
+    .gt-accion svg {
+        width: 16px;
+        height: 16px;
+    }
+
+/* En dispositivos CON hover (escritorio), las acciones arrancan ocultas
+   y aparecen al pasar sobre la fila. */
+@media (hover: hover) {
+    tr .gt-acciones {
+        opacity: 0;
+        transition: opacity 0.15s ease;
+    }
+
+    tr:hover .gt-acciones {
+        opacity: 1;
+    }
 }

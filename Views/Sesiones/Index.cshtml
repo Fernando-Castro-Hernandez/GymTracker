@@ -39,7 +39,14 @@
                                 <td class="text-muted">@sesion.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                                 <td class="text-center">@sesion.Series.Count</td>
                                 <td class="text-end">
-                                    <a asp-action="Detalle" asp-route-id="@sesion.Id" class="btn btn-sm btn-outline-primary">Ver</a>
+                                    <div class="gt-acciones justify-content-end">
+                                        <a asp-action="Detalle" asp-route-id="@sesion.Id" class="gt-accion" title="Ver sesión">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                                <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         }
