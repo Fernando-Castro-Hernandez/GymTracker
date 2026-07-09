@@ -17,13 +17,14 @@
                 Creada el @Model.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
             </p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             @if (ejercicios.Any())
             {
                 <form asp-controller="Sesiones" asp-action="Iniciar" method="post" class="d-inline">
                     <input type="hidden" name="rutinaId" value="@Model.Id" />
                     <button type="submit" class="btn btn-success">Iniciar entrenamiento</button>
                 </form>
+                <button type="button" id="btn-analizar" class="btn btn-secondary">Analizar con IA</button>
             }
             <a asp-action="Editar" asp-route-id="@Model.Id" class="btn btn-primary">Editar</a>
             <a asp-action="Eliminar" asp-route-id="@Model.Id" class="btn btn-outline-danger">Eliminar</a>
@@ -59,6 +60,17 @@
                 <h6 class="card-subtitle mb-2 text-muted">Descripción</h6>
                 <p class="card-text mb-0">@Model.Descripcion</p>
             </div>
+        </div>
+    }
+
+    @if (ejercicios.Any())
+    {
+        <div id="coach-panel" class="gt-coach-panel d-none">
+            <div class="gt-coach-header">
+                <h3 class="gt-coach-title">Análisis del entrenador</h3>
+                <span class="gt-coach-badge">IA</span>
+            </div>
+            <div id="coach-contenido"></div>
         </div>
     }
 
@@ -103,3 +115,85 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        const btnAnalizar = document.getElementById('btn-analizar');
+        const panel = document.getElementById('coach-panel');
+        const contenido = document.getElementById('coach-contenido');
+        const rutinaId = @Model.Id;
+
+        if (btnAnalizar) {
+            btnAnalizar.addEventListener('click', async () => {
+                // Mostrar panel con estado de carga.
+                panel.classList.remove('d-none');
+                contenido.innerHTML = `
+                    <div class="gt-coach-cargando">
+                        <span class="gt-coach-spinner"></span>
+                        <span>Analizando tu rutina con IA...</span>
+                    </div>`;
+                btnAnalizar.disabled = true;
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                try {
+                    const resp = await fetch('/api/coach/analizar/' + rutinaId, { method: 'POST' });
+
+                    if (!resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        contenido.innerHTML = `<p class="text-muted mb-0">${err.error || 'No se pudo generar el análisis. Intenta de nuevo.'}</p>`;
+                        btnAnalizar.disabled = false;
+                        return;
+                    }
+
+                    const a = await resp.json();
+                    contenido.innerHTML = renderAnalisis(a);
+                } catch (e) {
+                    contenido.innerHTML = `<p class="text-muted mb-0">Error de conexión. Intenta de nuevo.</p>`;
+                } finally {
+                    btnAnalizar.disabled = false;
+                }
+            });
+        }
+
+        function escapar(t) {
+            const d = document.createElement('div');
+            d.textContent = t ?? '';
+            return d.innerHTML;
+        }
+
+        function renderAnalisis(a) {
+            const veredictoClase = a.volumenAdecuado ? 'ok' : 'no';
+            const veredictoTexto = a.volumenAdecuado ? 'Volumen adecuado' : 'Volumen a revisar';
+
+            const sugerencias = (a.sugerencias || [])
+                .map(s => `<li>${escapar(s)}</li>`).join('');
+
+            const descuidados = (a.gruposDescuidados || [])
+                .map(g => `<span class="gt-coach-descuidado">${escapar(g)}</span>`).join('');
+
+            return `
+                <div class="gt-coach-seccion">
+                    <h4>Balance muscular</h4>
+                    <p>${escapar(a.balanceMuscular)}</p>
+                </div>
+
+                <div class="gt-coach-veredicto ${veredictoClase}">${veredictoTexto}</div>
+                <div class="gt-coach-seccion">
+                    <p>${escapar(a.comentarioVolumen)}</p>
+                </div>
+
+                ${sugerencias ? `
+                <div class="gt-coach-seccion">
+                    <h4>Sugerencias</h4>
+                    <ul class="gt-coach-lista">${sugerencias}</ul>
+                </div>` : ''}
+
+                ${descuidados ? `
+                <div class="gt-coach-seccion">
+                    <h4>Grupos descuidados</h4>
+                    <div>${descuidados}</div>
+                </div>` : ''}
+            `;
+        }
+    </script>
+}

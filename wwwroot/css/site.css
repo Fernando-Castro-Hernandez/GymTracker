@@ -22,6 +22,39 @@
     font-display: swap;
 }
 
+/* ===== Tipografía de cuerpo: Manrope (self-hosted) ===== */
+@font-face {
+    font-family: "Manrope";
+    src: url("../fonts/manrope-v20-latin-regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Manrope";
+    src: url("../fonts/manrope-v20-latin-500.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Manrope";
+    src: url("../fonts/manrope-v20-latin-600.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Manrope";
+    src: url("../fonts/manrope-v20-latin-700.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 
 :root {
     /* ----- Paleta ----- */
@@ -74,12 +107,10 @@ html {
 body {
     margin-bottom: 70px;
     background-color: var(--gt-bg);
-    background-image:
-        radial-gradient(1200px 600px at 80% -10%, rgba(197, 255, 46, 0.06), transparent 60%),
-        radial-gradient(900px 500px at -10% 0%, rgba(255, 106, 61, 0.05), transparent 55%);
+    background-image: radial-gradient(1200px 600px at 80% -10%, rgba(197, 255, 46, 0.06), transparent 60%), radial-gradient(900px 500px at -10% 0%, rgba(255, 106, 61, 0.05), transparent 55%);
     background-attachment: fixed;
     color: var(--gt-text);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -971,5 +1002,139 @@ dd {
 @media (max-width: 767px) {
     .gt-hero-logged {
         grid-template-columns: 1fr;
+    }
+}
+
+/* ===== Panel del Coach IA ===== */
+.gt-coach-panel {
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius);
+    background: radial-gradient(140% 120% at 0% 0%, var(--gt-accent-soft) 0%, transparent 45%), var(--gt-surface);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.gt-coach-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+    .gt-coach-header .gt-coach-title {
+        font-family: var(--gt-font-display);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.01em;
+        font-size: 1.25rem;
+        margin: 0;
+    }
+
+.gt-coach-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gt-accent);
+    border: 1px solid var(--gt-accent);
+    border-radius: 999px;
+    padding: 0.15em 0.6em;
+}
+
+/* Bloque de veredicto sobre el volumen. */
+.gt-coach-veredicto {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.35em 0.8em;
+    border-radius: var(--gt-radius-sm);
+    margin-bottom: 0.75rem;
+}
+
+    .gt-coach-veredicto.ok {
+        background: rgba(120, 220, 90, 0.12);
+        color: #9fe870;
+    }
+
+    .gt-coach-veredicto.no {
+        background: rgba(255, 160, 60, 0.12);
+        color: #ffb020;
+    }
+
+.gt-coach-seccion {
+    margin-bottom: 1rem;
+}
+
+    .gt-coach-seccion h4 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gt-text-muted);
+        margin-bottom: 0.4rem;
+    }
+
+    .gt-coach-seccion p {
+        margin: 0;
+        color: var(--gt-text);
+    }
+
+.gt-coach-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+    .gt-coach-lista li {
+        position: relative;
+        padding-left: 1.2rem;
+        margin-bottom: 0.4rem;
+        color: var(--gt-text);
+    }
+
+        .gt-coach-lista li::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0.55em;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--gt-accent);
+        }
+
+/* Tags de grupos descuidados (reusa el lenguaje de acento). */
+.gt-coach-descuidado {
+    display: inline-block;
+    font-size: 0.8rem;
+    padding: 0.25em 0.7em;
+    border-radius: var(--gt-radius-sm);
+    border: 1px solid rgba(255, 160, 60, 0.4);
+    color: #ffb020;
+    background: rgba(255, 160, 60, 0.08);
+    margin: 0 0.35rem 0.35rem 0;
+}
+
+/* Spinner simple de carga. */
+.gt-coach-cargando {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--gt-text-muted);
+}
+
+.gt-coach-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--gt-border);
+    border-top-color: var(--gt-accent);
+    border-radius: 50%;
+    animation: gt-spin 0.7s linear infinite;
+}
+
+@keyframes gt-spin {
+    to {
+        transform: rotate(360deg);
     }
 }
