@@ -24,6 +24,24 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<GymTracker.Services.Progreso.ProgresoService>();
 
+// ===== Servicios de IA (Coach) =====
+// Factory de volumen del ADR-05 (por si aún no estaba registrado).
+builder.Services.AddScoped<GymTracker.Services.Volumen.CalculoVolumenFactory>();
+
+// Proveedor de IA: Claude. La API key viene de configuración (User Secrets en
+// desarrollo, variable de entorno en producción), nunca del código.
+builder.Services.AddScoped<GymTracker.Services.IA.IProveedorIA>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var apiKey = config["Anthropic:ApiKey"]
+        ?? throw new InvalidOperationException("Falta la API key de Anthropic (Anthropic:ApiKey).");
+    return new GymTracker.Services.IA.ClaudeProveedor(apiKey);
+});
+
+// Orquestador del Coach.
+builder.Services.AddScoped<GymTracker.Services.IA.CoachService>();
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
