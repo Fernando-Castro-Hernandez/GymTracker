@@ -1,0 +1,61 @@
+﻿@model List<GymTracker.Services.Catalogo.EjercicioCatalogoDto>
+@{
+    ViewData["Title"] = "Explorar ejercicios";
+    var bodyParts = ViewBag.BodyParts as List<string> ?? new List<string>();
+    var activo = ViewBag.BodyPartActivo as string;
+    var nextCursor = ViewBag.NextCursor as string;
+}
+
+<div class="container mt-4">
+    <h1 class="page-title section-accent mb-1">Explorar ejercicios</h1>
+    <p class="page-subtitle mb-4">
+        Catálogo con animaciones para aprender la ejecución de cada movimiento.
+    </p>
+
+    <div class="gt-catalogo-filtros">
+        <a asp-action="Index" class="btn btn-sm @(activo == null ? "btn-primary" : "btn-secondary")">Todos</a>
+        @foreach (var bp in bodyParts)
+        {
+            <a asp-action="Index" asp-route-bodyPart="@bp"
+               class="btn btn-sm @(activo == bp ? "btn-primary" : "btn-secondary") text-capitalize">@bp</a>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-muted text-center py-5">
+            No se encontraron ejercicios para este filtro.
+        </div>
+    }
+    else
+    {
+        <div class="gt-catalogo-grid">
+            @foreach (var ej in Model)
+            {
+                <a asp-action="Detalle" asp-route-id="@ej.ExerciseId" class="gt-cat-card">
+                    <img src="@ej.GifUrl" alt="@ej.Name" class="gt-cat-gif" loading="lazy"
+                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23eee%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2250%22 fill=%22%23999%22 font-size=%228%22 text-anchor=%22middle%22 dy=%22.3em%22%3ESin animaci%C3%B3n%3C/text%3E%3C/svg%3E';" />
+                    <div class="gt-cat-body">
+                        <div class="gt-cat-nombre">@ej.Name</div>
+                        <div class="gt-cat-meta">
+                            @foreach (var m in ej.TargetMuscles.Take(2))
+                            {
+                                <span class="gt-cat-chip">@m</span>
+                            }
+                        </div>
+                    </div>
+                </a>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(nextCursor))
+        {
+            var urlVerMas = string.IsNullOrEmpty(activo)
+                ? $"/Catalogo?cursor={nextCursor}"
+                : $"/Catalogo?bodyPart={activo}&cursor={nextCursor}";
+            <div class="text-center mt-4">
+                <a href="@urlVerMas" class="btn btn-secondary">Ver más ejercicios</a>
+            </div>
+        }
+    }
+</div>

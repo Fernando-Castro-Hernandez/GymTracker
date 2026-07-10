@@ -1138,3 +1138,125 @@ dd {
         transform: rotate(360deg);
     }
 }
+
+/* ===== Catálogo "Explorar ejercicios" (GIFs de ExerciseDB) ===== */
+.gt-catalogo-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.gt-catalogo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.gt-cat-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius);
+    background-color: var(--gt-surface);
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--gt-text);
+    transition: all 0.18s ease;
+}
+
+    .gt-cat-card:hover {
+        border-color: var(--gt-accent);
+        transform: translateY(-2px);
+        box-shadow: var(--gt-shadow-hover);
+        color: var(--gt-text);
+    }
+
+/* El GIF: fondo claro porque los GIFs de ExerciseDB son sobre blanco. */
+.gt-cat-gif {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    background-color: #f5f5f5;
+}
+
+.gt-cat-body {
+    padding: 0.75rem 0.9rem;
+}
+
+.gt-cat-nombre {
+    font-family: var(--gt-font-display);
+    font-weight: 600;
+    text-transform: capitalize;
+    font-size: 1rem;
+    line-height: 1.1;
+    margin-bottom: 0.35rem;
+}
+
+.gt-cat-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.gt-cat-chip {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.15em 0.5em;
+    border-radius: var(--gt-radius-sm);
+    background-color: var(--gt-surface-2);
+    color: var(--gt-text-muted);
+    border: 1px solid var(--gt-border);
+}
+
+/* Detalle: GIF grande + instrucciones. */
+.gt-cat-detalle-gif {
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    background-color: #f5f5f5;
+    border-radius: var(--gt-radius);
+    border: 1px solid var(--gt-border);
+}
+
+.gt-cat-pasos {
+    list-style: none;
+    counter-reset: paso;
+    padding: 0;
+}
+
+    .gt-cat-pasos li {
+        counter-increment: paso;
+        position: relative;
+        padding-left: 2.2rem;
+        margin-bottom: 0.75rem;
+        color: var(--gt-text);
+    }
+
+        .gt-cat-pasos li::before {
+            content: counter(paso);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1.6rem;
+            height: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--gt-accent-soft);
+            color: var(--gt-accent);
+            font-family: var(--gt-font-display);
+            font-weight: 700;
+            border-radius: var(--gt-radius-sm);
+            font-size: 0.85rem;
+        }
+.gt-cat-subtitulo {
+    font-family: var(--gt-font-display);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gt-text-muted);
+    margin-bottom: 0.5rem;
+}

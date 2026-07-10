@@ -1,0 +1,69 @@
+﻿@model GymTracker.Services.Catalogo.EjercicioCatalogoDto
+@{
+    ViewData["Title"] = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(Model.Name);
+}
+
+<div class="container mt-4">
+    <a asp-action="Index" class="btn btn-secondary btn-sm mb-3">← Volver al catálogo</a>
+
+    <h1 class="page-title section-accent mb-1 text-capitalize">@Model.Name</h1>
+
+    <div class="row g-4 mt-1">
+        <div class="col-md-5">
+            <img src="@Model.GifUrl" alt="@Model.Name"
+                 class="gt-cat-detalle-gif"
+                 onerror="this.style.display='none'; document.getElementById('gif-error').style.display='flex';" />
+            <div id="gif-error" class="gt-cat-detalle-gif" style="display:none; align-items:center; justify-content:center; color:#999;">
+                Animación no disponible
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="mb-3">
+                <h4 class="gt-cat-subtitulo">Músculo principal</h4>
+                <div class="gt-cat-meta">
+                    @foreach (var m in Model.TargetMuscles)
+                    {
+                        <span class="gt-cat-chip">@m</span>
+                    }
+                </div>
+            </div>
+
+            @if (Model.SecondaryMuscles.Any())
+            {
+                <div class="mb-3">
+                    <h4 class="gt-cat-subtitulo">Músculos secundarios</h4>
+                    <div class="gt-cat-meta">
+                        @foreach (var m in Model.SecondaryMuscles)
+                        {
+                            <span class="gt-cat-chip">@m</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="mb-3">
+                <h4 class="gt-cat-subtitulo">Equipo</h4>
+                <div class="gt-cat-meta">
+                    @foreach (var e in Model.Equipments)
+                    {
+                        <span class="gt-cat-chip">@e</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Instructions.Any())
+    {
+        <h4 class="gt-cat-subtitulo mt-4 mb-3">Instrucciones</h4>
+        <ol class="gt-cat-pasos">
+            @foreach (var paso in Model.Instructions)
+            {
+                // Quitar el prefijo "Step:N " que trae la API.
+                var texto = System.Text.RegularExpressions.Regex.Replace(paso, @"^Step:\d+\s*", "");
+                <li>@texto</li>
+            }
+        </ol>
+    }
+</div>

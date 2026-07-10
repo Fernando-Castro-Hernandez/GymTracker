@@ -54,6 +54,22 @@ builder.Services.AddScoped<GymTracker.Services.IA.IProveedorIA>(sp =>
 builder.Services.AddScoped<GymTracker.Services.IA.CoachService>();
 
 
+
+// ===== Cliente HTTP para ExerciseDB (catálogo de ejercicios con GIFs) =====
+builder.Services.AddHttpClient("ExerciseDB", client =>
+{
+    client.BaseAddress = new Uri("https://oss.exercisedb.dev/api/v1/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+// Caché en memoria (para el catálogo externo).
+builder.Services.AddMemoryCache();
+
+// Servicio del catálogo.
+builder.Services.AddScoped<GymTracker.Services.Catalogo.CatalogoService>();
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
