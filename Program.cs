@@ -33,9 +33,21 @@ builder.Services.AddScoped<GymTracker.Services.Volumen.CalculoVolumenFactory>();
 builder.Services.AddScoped<GymTracker.Services.IA.IProveedorIA>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    var apiKey = config["Anthropic:ApiKey"]
+
+    var claudeKey = config["Anthropic:ApiKey"]
         ?? throw new InvalidOperationException("Falta la API key de Anthropic (Anthropic:ApiKey).");
-    return new GymTracker.Services.IA.ClaudeProveedor(apiKey);
+    var geminiKey = config["Gemini:ApiKey"]
+        ?? throw new InvalidOperationException("Falta la API key de Gemini (Gemini:ApiKey).");
+
+    // Orden de fallback: primero Claude, si falla, Gemini.
+    var proveedores = new List<GymTracker.Services.IA.IProveedorIA>
+    {
+        new GymTracker.Services.IA.ClaudeProveedor(claudeKey),
+        new GymTracker.Services.IA.GeminiProveedor(geminiKey)
+    };
+
+    var logger = sp.GetRequiredService<ILogger<GymTracker.Services.IA.ProveedorIAConFallback>>();
+    return new GymTracker.Services.IA.ProveedorIAConFallback(proveedores, logger);
 });
 
 // Orquestador del Coach.
