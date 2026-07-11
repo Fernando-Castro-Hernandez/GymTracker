@@ -1260,3 +1260,97 @@ dd {
     color: var(--gt-text-muted);
     margin-bottom: 0.5rem;
 }
+
+/* ===== Catálogo: buscador y secciones de filtros (B2) ===== */
+.gt-cat-buscador {
+    position: relative;
+    margin-bottom: 1.5rem;
+    max-width: 480px;
+}
+
+.gt-cat-buscador-icono {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gt-text-dim);
+    pointer-events: none;
+}
+
+.gt-cat-buscador-input {
+    width: 100%;
+    padding: 0.65rem 0.9rem 0.65rem 2.6rem;
+    background-color: var(--gt-surface);
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius-sm);
+    color: var(--gt-text);
+    font-size: 0.95rem;
+    transition: border-color 0.15s ease;
+}
+
+    .gt-cat-buscador-input:focus {
+        outline: none;
+        border-color: var(--gt-accent);
+    }
+
+    .gt-cat-buscador-input::placeholder {
+        color: var(--gt-text-dim);
+    }
+
+.gt-cat-seccion {
+    margin-bottom: 1.5rem;
+}
+
+.gt-cat-seccion-titulo {
+    font-family: var(--gt-font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem;
+    color: var(--gt-text-muted);
+    margin-bottom: 0.6rem;
+}
+
+.gt-cat-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.gt-cat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius-sm);
+    background-color: var(--gt-surface);
+    color: var(--gt-text-muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+    .gt-cat-pill:hover {
+        border-color: var(--gt-border-strong);
+        color: var(--gt-text);
+        background-color: var(--gt-surface-2);
+    }
+
+    .gt-cat-pill.activa {
+        border-color: var(--gt-accent);
+        background-color: var(--gt-accent-soft);
+        color: var(--gt-text);
+    }
+
+.gt-cat-pill-conteo {
+    font-size: 0.72rem;
+    padding: 0.05em 0.4em;
+    border-radius: 999px;
+    background-color: var(--gt-surface-2);
+    color: var(--gt-text-dim);
+}
+
+.gt-cat-pill.activa .gt-cat-pill-conteo {
+    background-color: var(--gt-accent);
+    color: var(--gt-bg);
+}

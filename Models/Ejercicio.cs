@@ -9,5 +9,6 @@ namespace GymTracker.Models
         public GrupoMuscular GrupoMuscular { get; set; }
         public string? Descripcion { get; set; }
         public string UsuarioId { get; set; } = string.Empty;
+        public string? ExerciseDbId { get; set; }
     }
 }
