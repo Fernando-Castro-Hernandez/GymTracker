@@ -9,7 +9,9 @@ using GymTracker.Models.ViewModels;
 namespace GymTracker.Controllers
 {
     [Authorize]
-    public class RutinasController(ApplicationDbContext context) : Controller
+    public class RutinasController(
+        ApplicationDbContext context,
+        GymTracker.Services.Catalogo.CatalogoService catalogo) : Controller
     {
         // ===== Helper: obtener el Id del usuario logueado =====
         private string ObtenerUsuarioId() =>
@@ -38,7 +40,13 @@ namespace GymTracker.Controllers
                     .ThenInclude(re => re.Ejercicio)
                 .FirstOrDefaultAsync(r => r.Id == id && r.UsuarioId == usuarioId);
 
-            return rutina == null ? NotFound() : View(rutina);
+            if (rutina == null) return NotFound();
+
+            // Resolver el GIF de cada ejercicio vinculado (para el modal de animación).
+            ViewBag.Gifs = catalogo.ResolverGifs(
+                rutina.Ejercicios.Select(re => (re.EjercicioId, re.Ejercicio.ExerciseDbId)));
+
+            return View(rutina);
         }
 
         // ===== Agregar GET =====

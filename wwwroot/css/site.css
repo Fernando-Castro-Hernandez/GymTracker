@@ -1280,6 +1280,23 @@ dd {
     font-weight: 600;
 }
 
+/* Miniatura de GIF (entrenamiento y detalle de rutina) que abre el modal. */
+.gt-serie-gif {
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+    background-color: #f5f5f5;
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius-sm);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.16s ease;
+}
+
+    .gt-serie-gif:hover {
+        border-color: var(--gt-accent);
+    }
+
 .gt-cat-body {
     padding: 0.75rem 0.9rem;
 }

@@ -31,7 +31,17 @@
             var primera = grupo.First();
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong>@grupo.Key</strong>
+                    <div class="d-flex align-items-center gap-2">
+                        @if (!string.IsNullOrEmpty(primera.GifUrl))
+                        {
+                            <img src="@primera.GifUrl" alt="@grupo.Key"
+                                 class="gt-serie-gif js-abrir-gif"
+                                 data-gif="@primera.GifUrl" data-nombre="@grupo.Key"
+                                 title="Ver animación" loading="lazy"
+                                 onerror="this.remove()" />
+                        }
+                        <strong>@grupo.Key</strong>
+                    </div>
                     <span class="gt-badge-grupo" data-grupo="@primera.GrupoMuscular">@primera.GrupoMuscular</span>
                 </div>
                 <div class="table-responsive">
@@ -89,3 +99,39 @@
         </div>
     </form>
 </div>
+
+<!-- Modal: animación del ejercicio (GIF grande) -->
+<div class="modal fade" id="modalGif" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-capitalize" id="modalGifTitulo"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalGifImg" src="" alt="" class="gt-cat-detalle-gif" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const modalEl = document.getElementById('modalGif');
+            if (!modalEl) return;
+            const modal = new bootstrap.Modal(modalEl);
+            const img = document.getElementById('modalGifImg');
+            const titulo = document.getElementById('modalGifTitulo');
+
+            document.querySelectorAll('.js-abrir-gif').forEach(el => {
+                el.addEventListener('click', () => {
+                    img.src = el.dataset.gif;
+                    img.alt = el.dataset.nombre || '';
+                    titulo.textContent = el.dataset.nombre || 'Animación';
+                    modal.show();
+                });
+            });
+        })();
+    </script>
+}

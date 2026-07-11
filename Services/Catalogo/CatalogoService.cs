@@ -76,6 +76,29 @@ namespace GymTracker.Services.Catalogo
             return Task.FromResult(ejercicio);
         }
 
+        // Dado un conjunto de (ejercicioId, exerciseDbId), devuelve un mapa
+        // ejercicioId -> gifUrl para los ejercicios que tienen un vínculo
+        // resolvible en el seed. Se usa para mostrar los GIFs durante el
+        // entrenamiento y en el detalle de rutina. Es síncrono: opera en memoria.
+        public Dictionary<int, string> ResolverGifs(
+            IEnumerable<(int EjercicioId, string? ExerciseDbId)> ejercicios)
+        {
+            var mapa = new Dictionary<int, string>();
+
+            foreach (var (ejercicioId, exerciseDbId) in ejercicios)
+            {
+                if (string.IsNullOrEmpty(exerciseDbId)) continue;
+
+                var detalle = Catalogo.FirstOrDefault(e =>
+                    e.ExerciseId.Equals(exerciseDbId, StringComparison.OrdinalIgnoreCase));
+
+                if (detalle != null && !string.IsNullOrEmpty(detalle.GifUrl))
+                    mapa[ejercicioId] = detalle.GifUrl;
+            }
+
+            return mapa;
+        }
+
         // Lista las partes del cuerpo disponibles (para los filtros), ordenadas.
         public Task<List<string>> ListarBodyPartsAsync()
         {

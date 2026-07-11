@@ -5,6 +5,7 @@
     var ejercicios = Model.Ejercicios.OrderBy(e => e.Orden).ToList();
     var totalSeries = ejercicios.Sum(e => e.SeriesObjetivo);
     var totalGrupos = ejercicios.Select(e => e.Ejercicio.GrupoMuscular).Distinct().Count();
+    var gifs = ViewBag.Gifs as Dictionary<int, string> ?? new Dictionary<int, string>();
 }
 
 <div class="container mt-4">
@@ -102,7 +103,19 @@
                         {
                             <tr>
                                 <td class="text-muted">@(ejercicios.IndexOf(item) + 1)</td>
-                                <td><strong>@item.Ejercicio.Nombre</strong></td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        @if (gifs.TryGetValue(item.EjercicioId, out var gifUrl))
+                                        {
+                                            <img src="@gifUrl" alt="@item.Ejercicio.Nombre"
+                                                 class="gt-serie-gif js-abrir-gif"
+                                                 data-gif="@gifUrl" data-nombre="@item.Ejercicio.Nombre"
+                                                 title="Ver animación" loading="lazy"
+                                                 onerror="this.remove()" />
+                                        }
+                                        <strong>@item.Ejercicio.Nombre</strong>
+                                    </div>
+                                </td>
                                 <td><span class="gt-badge-grupo" data-grupo="@item.Ejercicio.GrupoMuscular">@item.Ejercicio.GrupoMuscular</span></td>
                                 <td class="text-center">@item.SeriesObjetivo</td>
                                 <td class="text-center">@item.RepeticionesObjetivo</td>
@@ -116,7 +129,41 @@
     }
 </div>
 
+<!-- Modal: animación del ejercicio (GIF grande) -->
+<div class="modal fade" id="modalGif" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-capitalize" id="modalGifTitulo"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalGifImg" src="" alt="" class="gt-cat-detalle-gif" />
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <script>
+        // Modal de animación del ejercicio (GIF).
+        (function () {
+            const modalEl = document.getElementById('modalGif');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                const img = document.getElementById('modalGifImg');
+                const titulo = document.getElementById('modalGifTitulo');
+                document.querySelectorAll('.js-abrir-gif').forEach(el => {
+                    el.addEventListener('click', () => {
+                        img.src = el.dataset.gif;
+                        img.alt = el.dataset.nombre || '';
+                        titulo.textContent = el.dataset.nombre || 'Animación';
+                        modal.show();
+                    });
+                });
+            }
+        })();
+    </script>
     <script>
         const btnAnalizar = document.getElementById('btn-analizar');
         const panel = document.getElementById('coach-panel');

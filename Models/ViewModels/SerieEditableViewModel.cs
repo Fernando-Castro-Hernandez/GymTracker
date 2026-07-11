@@ -14,5 +14,9 @@
         // Valores reales (editables por el usuario).
         public int RepeticionesReales { get; set; }
         public decimal PesoReal { get; set; }
+
+        // GIF del ejercicio vinculado (resuelto en vivo desde el catálogo), para
+        // mostrar la animación durante el entrenamiento. null = sin animación.
+        public string? GifUrl { get; set; }
     }
 }

@@ -9,7 +9,9 @@ using System.Security.Claims;
 namespace GymTracker.Controllers
 {
     [Authorize]
-    public class SesionesController(ApplicationDbContext context) : Controller
+    public class SesionesController(
+        ApplicationDbContext context,
+        GymTracker.Services.Catalogo.CatalogoService catalogo) : Controller
     {
         // ===== Helper: obtener el Id del usuario logueado =====
         private string ObtenerUsuarioId() =>
@@ -95,6 +97,15 @@ namespace GymTracker.Controllers
 
             if (sesion == null) return NotFound();
 
+            // Resolver el GIF de cada ejercicio EN VIVO desde el ejercicio actual
+            // (el snapshot guarda EjercicioId; el GIF es ayuda visual, no historial).
+            var ejercicioIds = sesion.Series.Select(s => s.EjercicioId).Distinct().ToList();
+            var vinculos = await context.Ejercicios
+                .Where(e => e.UsuarioId == usuarioId && ejercicioIds.Contains(e.Id))
+                .Select(e => new { e.Id, e.ExerciseDbId })
+                .ToListAsync();
+            var gifs = catalogo.ResolverGifs(vinculos.Select(v => (v.Id, v.ExerciseDbId)));
+
             // Mapear la entidad a un ViewModel que solo expone lo editable.
             var modelo = new RegistrarSesionViewModel
             {
@@ -114,7 +125,8 @@ namespace GymTracker.Controllers
                         RepeticionesObjetivo = s.RepeticionesObjetivo,
                         PesoObjetivo = s.PesoObjetivo,
                         RepeticionesReales = s.RepeticionesReales,
-                        PesoReal = s.PesoReal
+                        PesoReal = s.PesoReal,
+                        GifUrl = gifs.TryGetValue(s.EjercicioId, out var g) ? g : null
                     })
                     .ToList()
             };
