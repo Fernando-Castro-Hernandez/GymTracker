@@ -30,6 +30,32 @@
                     <textarea asp-for="Descripcion" class="form-control" rows="3"></textarea>
                 </div>
 
+                <div class="mb-4">
+                    <label class="form-label">Animación</label>
+                    <div id="vinculoEstado">
+                        @if (ViewBag.VinculoGif != null)
+                        {
+                            <div class="gt-vinculo-estado">
+                                <img src="@ViewBag.VinculoGif" alt="@ViewBag.VinculoNombre"
+                                     class="gt-vinculo-thumb" onerror="this.style.display='none'" />
+                                <div class="gt-vinculo-info">
+                                    <div class="gt-vinculo-nombre text-capitalize">@ViewBag.VinculoNombre</div>
+                                    <div class="text-muted small">Animación vinculada desde el catálogo.</div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        id="btnDesvincular" data-id="@Model.Id">Desvincular</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-muted small">
+                                Sin animación vinculada. Vincula una desde
+                                <a asp-controller="Catalogo" asp-action="Index">Explorar</a>.
+                            </div>
+                        }
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-between">
                     <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
                     <button type="submit" class="btn btn-primary">Guardar cambios</button>
@@ -38,3 +64,37 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const btn = document.getElementById('btnDesvincular');
+            if (!btn) return;
+
+            const tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+            const token = tokenEl ? tokenEl.value : '';
+            const estado = document.getElementById('vinculoEstado');
+
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                try {
+                    const body = new URLSearchParams({
+                        ejercicioId: btn.dataset.id,
+                        __RequestVerificationToken: token
+                    });
+                    const r = await fetch('/Ejercicios/Desvincular', { method: 'POST', body });
+                    const data = await r.json();
+                    if (r.ok && data.ok) {
+                        estado.innerHTML =
+                            '<div class="text-muted small">Sin animación vinculada. ' +
+                            'Vincula una desde <a href="/Catalogo">Explorar</a>.</div>';
+                    } else {
+                        btn.disabled = false;
+                    }
+                } catch {
+                    btn.disabled = false;
+                }
+            });
+        })();
+    </script>
+}

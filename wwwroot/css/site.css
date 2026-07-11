@@ -1180,6 +1180,106 @@ dd {
     background-color: #f5f5f5;
 }
 
+/* Contenedor de la tarjeta: permite superponer el botón "Vincular" (que es
+   hermano del <a>, no hijo, para no anidar interactivos). */
+.gt-cat-card-wrap {
+    position: relative;
+    display: flex;
+}
+
+    .gt-cat-card-wrap > .gt-cat-card {
+        flex: 1;
+    }
+
+/* Acción "Vincular": aparece en hover (DESIGN-RULES), acento con mesura. */
+.gt-cat-vincular {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--gt-bg);
+    background-color: var(--gt-accent);
+    border: none;
+    border-radius: var(--gt-radius-sm);
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease, background-color 0.16s ease;
+}
+
+.gt-cat-card-wrap:hover .gt-cat-vincular,
+.gt-cat-vincular:focus-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+    .gt-cat-vincular:hover {
+        background-color: var(--gt-accent-dark);
+    }
+
+/* En pantallas táctiles no hay hover: mostrar siempre. */
+@media (hover: none) {
+    .gt-cat-vincular {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+    }
+}
+
+/* Toast de confirmación (vinculado). */
+.gt-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1080;
+    padding: 0.7rem 1.1rem;
+    background-color: var(--gt-surface-2);
+    border: 1px solid var(--gt-accent);
+    border-radius: var(--gt-radius-sm);
+    color: var(--gt-text);
+    box-shadow: var(--gt-shadow-hover);
+    font-size: 0.9rem;
+}
+
+/* Estado de vinculación en editar ejercicio. */
+.gt-vinculo-estado {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem;
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius-sm);
+    background-color: var(--gt-surface-2);
+}
+
+.gt-vinculo-thumb {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    background-color: #f5f5f5;
+    border-radius: var(--gt-radius-sm);
+    flex-shrink: 0;
+}
+
+.gt-vinculo-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.gt-vinculo-nombre {
+    font-family: var(--gt-font-display);
+    font-weight: 600;
+}
+
 .gt-cat-body {
     padding: 0.75rem 0.9rem;
 }
