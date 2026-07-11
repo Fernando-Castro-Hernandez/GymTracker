@@ -2,10 +2,8 @@
 @{
     ViewData["Title"] = "Explorar ejercicios";
     var bodyParts = ViewBag.BodyParts as List<string> ?? new List<string>();
-    var conteos = ViewBag.Conteos as Dictionary<string, int> ?? new Dictionary<string, int>();
     var activo = ViewBag.BodyPartActivo as string;
-    var equipmentActivo = ViewBag.EquipmentActivo as string;
-    var textoActivo = ViewBag.TextoActivo as string;
+    var nextCursor = ViewBag.NextCursor as string;
 }
 
 <div class="container mt-4">
@@ -14,38 +12,13 @@
         Catálogo con animaciones para aprender la ejecución de cada movimiento.
     </p>
 
-    <div class="gt-cat-buscador">
-        <svg class="gt-cat-buscador-icono" width="18" height="18" viewBox="0 0 24 24"
-             fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" id="gtCatBuscar" class="gt-cat-buscador-input"
-               placeholder="Buscar ejercicio por nombre…"
-               value="@textoActivo" autocomplete="off" />
-    </div>
-
-    <div class="gt-cat-seccion">
-        <div class="gt-cat-seccion-titulo">Zona del cuerpo</div>
-        <div class="gt-cat-pills">
-            <a asp-action="Index" asp-route-equipment="@equipmentActivo"
-               class="gt-cat-pill @(activo == null ? "activa" : "")">Todos</a>
-            @foreach (var bp in bodyParts)
-            {
-                var n = conteos.TryGetValue(bp, out var c) ? c : 0;
-                if (n == 0) { continue; }
-                <a asp-action="Index" asp-route-bodyPart="@bp" asp-route-equipment="@equipmentActivo"
-                   class="gt-cat-pill @(activo == bp ? "activa" : "")">
-                    <span class="text-capitalize">@bp</span>
-                    <span class="gt-cat-pill-conteo">@n</span>
-                </a>
-            }
-        </div>
-    </div>
-
-    <div id="gtCatSinResultados" class="text-muted text-center py-5" style="display:none;">
-        No se encontraron ejercicios con ese nombre.
+    <div class="gt-catalogo-filtros">
+        <a asp-action="Index" class="btn btn-sm @(activo == null ? "btn-primary" : "btn-secondary")">Todos</a>
+        @foreach (var bp in bodyParts)
+        {
+            <a asp-action="Index" asp-route-bodyPart="@bp"
+               class="btn btn-sm @(activo == bp ? "btn-primary" : "btn-secondary") text-capitalize">@bp</a>
+        }
     </div>
 
     @if (!Model.Any())
@@ -56,11 +29,10 @@
     }
     else
     {
-        <div class="gt-catalogo-grid" id="gtCatGrid">
+        <div class="gt-catalogo-grid">
             @foreach (var ej in Model)
             {
-                <a asp-action="Detalle" asp-route-id="@ej.ExerciseId"
-                   class="gt-cat-card" data-nombre="@ej.Name.ToLower()">
+                <a asp-action="Detalle" asp-route-id="@ej.ExerciseId" class="gt-cat-card">
                     <img src="@ej.GifUrl" alt="@ej.Name" class="gt-cat-gif" loading="lazy"
                          onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23eee%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2250%22 fill=%22%23999%22 font-size=%228%22 text-anchor=%22middle%22 dy=%22.3em%22%3ESin animaci%C3%B3n%3C/text%3E%3C/svg%3E';" />
                     <div class="gt-cat-body">
@@ -75,43 +47,15 @@
                 </a>
             }
         </div>
+
+        @if (!string.IsNullOrEmpty(nextCursor))
+        {
+            var urlVerMas = string.IsNullOrEmpty(activo)
+                ? $"/Catalogo?cursor={nextCursor}"
+                : $"/Catalogo?bodyPart={activo}&cursor={nextCursor}";
+            <div class="text-center mt-4">
+                <a href="@urlVerMas" class="btn btn-secondary">Ver más ejercicios</a>
+            </div>
+        }
     }
 </div>
-
-@section Scripts {
-    <script>
-        (function () {
-            const input = document.getElementById("gtCatBuscar");
-            const grid = document.getElementById("gtCatGrid");
-            const sinResultados = document.getElementById("gtCatSinResultados");
-            if (!input || !grid) return;
-
-            const cards = Array.from(grid.querySelectorAll(".gt-cat-card"));
-
-            function filtrar() {
-                const q = input.value.trim().toLowerCase();
-                let visibles = 0;
-                cards.forEach(card => {
-                    const nombre = card.getAttribute("data-nombre") || "";
-                    const coincide = nombre.includes(q);
-                    card.style.display = coincide ? "" : "none";
-                    if (coincide) visibles++;
-                });
-                sinResultados.style.display = visibles === 0 ? "block" : "none";
-            }
-
-            input.addEventListener("input", filtrar);
-
-            // Enter: recarga server-side con el texto (actualiza también contadores).
-            input.addEventListener("keydown", function (e) {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    const params = new URLSearchParams(window.location.search);
-                    const q = input.value.trim();
-                    if (q) { params.set("texto", q); } else { params.delete("texto"); }
-                    window.location.search = params.toString();
-                }
-            });
-        })();
-    </script>
-}

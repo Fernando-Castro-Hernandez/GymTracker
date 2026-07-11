@@ -33,9 +33,6 @@ namespace GymTracker.Migrations
                     b.Property<string>("Descripcion")
                         .HasColumnType("text");
 
-                    b.Property<string>("ExerciseDbId")
-                        .HasColumnType("text");
-
                     b.Property<int>("GrupoMuscular")
                         .HasColumnType("integer");
 

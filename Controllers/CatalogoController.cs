@@ -9,29 +9,26 @@ namespace GymTracker.Controllers
     public class CatalogoController(CatalogoService catalogoService) : Controller
     {
         // GET /Catalogo
-        // Muestra la galería con filtros: zona del cuerpo, equipamiento y texto.
-        // Los filtros de zona/equipamiento recargan la página (server-side); la
-        // búsqueda por texto además filtra en vivo en el cliente (JS).
-        public async Task<IActionResult> Index(
-            string? bodyPart = null, string? equipment = null, string? texto = null)
+        // Muestra la galería; el filtro por grupo se pasa por query (?bodyPart=chest).
+        public async Task<IActionResult> Index(string? bodyPart = null, string? cursor = null)
         {
-            // Ejercicios a mostrar, aplicando todos los filtros activos.
-            var ejercicios = await catalogoService.FiltrarAsync(
-                bodyPart: bodyPart, equipment: equipment, texto: texto);
+            // DIAGNÓSTICO TEMPORAL - quitar después
+            System.Diagnostics.Debug.WriteLine($"[CATALOGO] Cursor recibido: '{cursor}'");
 
-            // Contadores dinámicos por zona del cuerpo (reflejan equipamiento y
-            // texto, pero no el bodyPart seleccionado).
-            ViewBag.Conteos = await catalogoService.ContarPorBodyPartAsync(equipment, texto);
-
-            // Partes del cuerpo para los botones de filtro.
             ViewBag.BodyParts = await catalogoService.ListarBodyPartsAsync();
+            // ... resto igual
 
-            // Estado activo de los filtros (para resaltar y para los enlaces).
+            // Cargar las partes del cuerpo para los botones de filtro.
+            ViewBag.BodyParts = await catalogoService.ListarBodyPartsAsync();
             ViewBag.BodyPartActivo = bodyPart;
-            ViewBag.EquipmentActivo = equipment;
-            ViewBag.TextoActivo = texto;
 
-            return View(ejercicios);
+            // Cargar la primera (o siguiente) página de ejercicios.
+            var respuesta = await catalogoService.ListarAsync(bodyPart, cursor);
+
+            // Pasar el cursor de la siguiente página a la vista (para "Ver más").
+            ViewBag.NextCursor = respuesta.Meta?.HasNextPage == true ? respuesta.Meta.NextCursor : null;
+
+            return View(respuesta.Data);
         }
 
         // GET /Catalogo/Detalle/{id}
