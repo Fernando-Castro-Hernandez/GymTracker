@@ -19,4 +19,13 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.2" />
   </ItemGroup>
 
+  <!-- Seed local del catalogo de ejercicios: se lee en runtime, se copia al
+       output y al publish para que funcione en local y en el despliegue (AWS). -->
+  <ItemGroup>
+    <Content Update="SeedData\exercises.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

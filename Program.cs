@@ -55,18 +55,12 @@ builder.Services.AddScoped<GymTracker.Services.IA.CoachService>();
 
 
 
-// ===== Cliente HTTP para ExerciseDB (catálogo de ejercicios con GIFs) =====
-builder.Services.AddHttpClient("ExerciseDB", client =>
-{
-    client.BaseAddress = new Uri("https://oss.exercisedb.dev/api/v1/");
-    client.Timeout = TimeSpan.FromSeconds(10);
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
-
-// Caché en memoria (para el catálogo externo).
+// ===== Catálogo de ejercicios (con GIFs) =====
+// El catálogo se sirve desde un seed local (SeedData/exercises.json), no desde la
+// API externa en runtime (ver ADR-06 y CatalogoService). Por eso ya no se
+// registra un HttpClient para ExerciseDB. La caché en memoria guarda el catálogo
+// cargado una sola vez desde el archivo.
 builder.Services.AddMemoryCache();
-
-// Servicio del catálogo.
 builder.Services.AddScoped<GymTracker.Services.Catalogo.CatalogoService>();
 
 

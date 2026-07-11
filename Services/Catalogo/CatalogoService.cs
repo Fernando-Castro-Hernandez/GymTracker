@@ -1,87 +1,101 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace GymTracker.Services.Catalogo
 {
-    // Servicio que consume el catálogo externo de ejercicios (ExerciseDB).
-    // Usa IHttpClientFactory (cliente "ExerciseDB") y cachea las respuestas en
-    // memoria para reducir llamadas externas y protegerse de la latencia/caídas
-    // del tercero.
-    public class CatalogoService(IHttpClientFactory httpClientFactory, IMemoryCache cache)
+    // Servicio del catálogo de ejercicios (con GIFs).
+    //
+    // Arquitectura (ADR-06): patrón cache-aside / seed local. El catálogo completo
+    // (~1,500 ejercicios) se descargó UNA vez desde ExerciseDB OSS a
+    // SeedData/exercises.json (ver tools/generate-seed.ps1). En runtime NO se llama
+    // a la API externa: se lee el JSON local una sola vez, se cachea en memoria y
+    // se filtra/pagina con LINQ. Así el catálogo carga en milisegundos, no hay
+    // rate limit (HTTP 429), y el número de usuarios queda desacoplado del
+    // consumo de la API. Los GIFs individuales sí se sirven del CDN al vuelo
+    // (URLs estables en gifUrl), pero eso no toca la API de lista.
+    public class CatalogoService(IWebHostEnvironment env, IMemoryCache cache)
     {
-        private static readonly TimeSpan DuracionCache = TimeSpan.FromHours(6);
+        private const string ClaveCacheCatalogo = "catalogo:todos";
 
         private static readonly JsonSerializerOptions JsonOpts = new()
         {
             PropertyNameCaseInsensitive = true
         };
 
+        // Catálogo completo, cargado una sola vez desde el archivo y cacheado
+        // permanentemente (es un archivo estático que no cambia en runtime).
+        private List<EjercicioCatalogoDto> Catalogo =>
+            cache.GetOrCreate(ClaveCacheCatalogo, entrada =>
+            {
+                entrada.Priority = CacheItemPriority.NeverRemove;
+                return CargarDesdeArchivo();
+            })!;
+
         // Lista ejercicios, opcionalmente filtrados por parte del cuerpo, con
-        // paginación por cursor. Cachea cada combinación de filtro+cursor.
-        public async Task<RespuestaCatalogoDto> ListarAsync(
+        // paginación por offset. El "cursor" es el índice de inicio de la
+        // siguiente página (se mantiene el contrato opaco de la vista: la vista
+        // solo reenvía el NextCursor que le damos, sin interpretarlo).
+        public Task<RespuestaCatalogoDto> ListarAsync(
             string? bodyPart = null, string? cursor = null, int limit = 12)
         {
-            // Clave de caché única por combinación de parámetros.
-            var claveCache = $"catalogo:list:{bodyPart}:{cursor}:{limit}";
+            IEnumerable<EjercicioCatalogoDto> filtrados = Catalogo;
 
-            if (cache.TryGetValue(claveCache, out RespuestaCatalogoDto? cacheada) && cacheada != null)
-                return cacheada;
+            if (!string.IsNullOrWhiteSpace(bodyPart))
+                filtrados = filtrados.Where(e =>
+                    e.BodyParts.Any(bp => bp.Equals(bodyPart, StringComparison.OrdinalIgnoreCase)));
 
-            // Construir la ruta relativa con los parámetros presentes.
-            var query = new List<string> { $"limit={limit}" };
-            if (!string.IsNullOrWhiteSpace(bodyPart)) query.Add($"bodyParts={Uri.EscapeDataString(bodyPart)}");
-            if (!string.IsNullOrWhiteSpace(cursor)) query.Add($"after={Uri.EscapeDataString(cursor)}");
-            var ruta = "exercises?" + string.Join("&", query);
+            var lista = filtrados.ToList();
 
-            var respuesta = await ObtenerAsync<RespuestaCatalogoDto>(ruta)
-                ?? new RespuestaCatalogoDto();
+            // El cursor es el offset; si no es un entero válido, empieza en 0.
+            var offset = int.TryParse(cursor, out var o) && o > 0 ? o : 0;
 
-            cache.Set(claveCache, respuesta, DuracionCache);
-            return respuesta;
+            var pagina = lista.Skip(offset).Take(limit).ToList();
+            var siguienteOffset = offset + pagina.Count;
+            var hayMas = siguienteOffset < lista.Count;
+
+            var respuesta = new RespuestaCatalogoDto
+            {
+                Success = true,
+                Data = pagina,
+                Meta = new MetaCatalogo
+                {
+                    Total = lista.Count,
+                    HasNextPage = hayMas,
+                    NextCursor = hayMas ? siguienteOffset.ToString() : null
+                }
+            };
+
+            return Task.FromResult(respuesta);
         }
 
-        // Obtiene el detalle de un ejercicio por su id. Cacheado por id.
-        public async Task<EjercicioCatalogoDto?> ObtenerDetalleAsync(string exerciseId)
+        // Obtiene el detalle de un ejercicio por su id (búsqueda en memoria).
+        public Task<EjercicioCatalogoDto?> ObtenerDetalleAsync(string exerciseId)
         {
-            var claveCache = $"catalogo:detalle:{exerciseId}";
-
-            if (cache.TryGetValue(claveCache, out EjercicioCatalogoDto? cacheado) && cacheado != null)
-                return cacheado;
-
-            // El detalle viene envuelto en { success, data: {...} } (objeto, no lista).
-            var envoltorio = await ObtenerAsync<RespuestaDetalleDto>($"exercises/{Uri.EscapeDataString(exerciseId)}");
-            var detalle = envoltorio?.Data;
-
-            if (detalle != null)
-                cache.Set(claveCache, detalle, DuracionCache);
-
-            return detalle;
+            var ejercicio = Catalogo.FirstOrDefault(e =>
+                e.ExerciseId.Equals(exerciseId, StringComparison.OrdinalIgnoreCase));
+            return Task.FromResult(ejercicio);
         }
 
-        // Lista las partes del cuerpo disponibles (para los filtros). Cacheado.
-        public async Task<List<string>> ListarBodyPartsAsync()
+        // Lista las partes del cuerpo disponibles (para los filtros), ordenadas.
+        public Task<List<string>> ListarBodyPartsAsync()
         {
-            const string claveCache = "catalogo:bodyparts";
-
-            if (cache.TryGetValue(claveCache, out List<string>? cacheadas) && cacheadas != null)
-                return cacheadas;
-
-            var envoltorio = await ObtenerAsync<RespuestaNombresDto>("bodyparts");
-            var lista = envoltorio?.Data.Select(x => x.Name).ToList() ?? new List<string>();
-
-            cache.Set(claveCache, lista, DuracionCache);
-            return lista;
+            var partes = Catalogo
+                .SelectMany(e => e.BodyParts)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            return Task.FromResult(partes);
         }
 
-        // Helper genérico: hace GET al cliente "ExerciseDB" y deserializa.
-        // Devuelve null si falla (el llamador decide cómo manejarlo).
-        private async Task<T?> ObtenerAsync<T>(string ruta) where T : class
+        // Lee y deserializa el seed local. Se ejecuta una sola vez (lo cachea la
+        // propiedad Catalogo). Si el archivo falta o está corrupto, lanza para
+        // que el fallo sea visible en desarrollo (no un catálogo vacío silencioso).
+        private List<EjercicioCatalogoDto> CargarDesdeArchivo()
         {
-            var client = httpClientFactory.CreateClient("ExerciseDB");
-            var resp = await client.GetAsync(ruta);
-            resp.EnsureSuccessStatusCode();
-            var json = await resp.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<T>(json, JsonOpts);
+            var ruta = Path.Combine(env.ContentRootPath, "SeedData", "exercises.json");
+            var json = File.ReadAllText(ruta);
+            return JsonSerializer.Deserialize<List<EjercicioCatalogoDto>>(json, JsonOpts)
+                ?? new List<EjercicioCatalogoDto>();
         }
     }
 }
