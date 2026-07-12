@@ -68,6 +68,10 @@ namespace GymTracker.Services.Catalogo
             return Task.FromResult(respuesta);
         }
 
+        // Devuelve todo el catálogo (para el filtrado en cliente de "Explorar":
+        // búsqueda instantánea, filtros combinados y contadores dinámicos en JS).
+        public IReadOnlyList<EjercicioCatalogoDto> ObtenerTodos() => Catalogo;
+
         // Obtiene el detalle de un ejercicio por su id (búsqueda en memoria).
         public Task<EjercicioCatalogoDto?> ObtenerDetalleAsync(string exerciseId)
         {

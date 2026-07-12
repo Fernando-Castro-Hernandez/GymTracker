@@ -1,4 +1,4 @@
-﻿using GymTracker.Services.Catalogo;
+using GymTracker.Services.Catalogo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,26 +9,28 @@ namespace GymTracker.Controllers
     public class CatalogoController(CatalogoService catalogoService) : Controller
     {
         // GET /Catalogo
-        // Muestra la galería; el filtro por grupo se pasa por query (?bodyPart=chest).
-        public async Task<IActionResult> Index(string? bodyPart = null, string? cursor = null)
+        // Muestra la galería. El filtrado (texto, zona, equipamiento, patrón,
+        // sub-músculo) y los contadores dinámicos se hacen en el cliente sobre
+        // los datos que entrega /Catalogo/Datos (ver catalogo-explorar.js).
+        public IActionResult Index() => View();
+
+        // GET /Catalogo/Datos
+        // Devuelve el catálogo completo en JSON compacto para el filtrado en
+        // cliente. Nombres de campo cortos para reducir el tamaño de la carga.
+        [HttpGet]
+        public IActionResult Datos()
         {
-            // DIAGNÓSTICO TEMPORAL - quitar después
-            System.Diagnostics.Debug.WriteLine($"[CATALOGO] Cursor recibido: '{cursor}'");
+            var datos = catalogoService.ObtenerTodos().Select(e => new
+            {
+                id = e.ExerciseId,
+                name = e.Name,
+                gif = e.GifUrl,
+                body = e.BodyParts,
+                equip = e.Equipments,
+                target = e.TargetMuscles
+            });
 
-            ViewBag.BodyParts = await catalogoService.ListarBodyPartsAsync();
-            // ... resto igual
-
-            // Cargar las partes del cuerpo para los botones de filtro.
-            ViewBag.BodyParts = await catalogoService.ListarBodyPartsAsync();
-            ViewBag.BodyPartActivo = bodyPart;
-
-            // Cargar la primera (o siguiente) página de ejercicios.
-            var respuesta = await catalogoService.ListarAsync(bodyPart, cursor);
-
-            // Pasar el cursor de la siguiente página a la vista (para "Ver más").
-            ViewBag.NextCursor = respuesta.Meta?.HasNextPage == true ? respuesta.Meta.NextCursor : null;
-
-            return View(respuesta.Data);
+            return Json(datos);
         }
 
         // GET /Catalogo/Detalle/{id}
