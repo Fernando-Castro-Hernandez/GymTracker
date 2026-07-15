@@ -202,3 +202,77 @@ arquitectónica) su ADR.
 - **Documentar el uso de IA del producto** (que la app *usa* un modelo) es
   distinto de la **declaración de uso de IA en el desarrollo**; ambas deben quedar
   claras.
+
+---
+
+## 7. Entornos y despliegue (relación con AWS)
+
+Esta sección explica el concepto de **entorno** (environment) y qué cambia al
+pasar de la máquina local a AWS. Es transversal a todas las integraciones, porque
+tanto los secretos de IA (API keys) como la base de datos dependen de ello.
+
+### 7.1 Qué es un entorno
+
+Un entorno es la **misma app corriendo en un contexto distinto, con configuración
+distinta pero el mismo código**. No quieres experimentar donde están los usuarios
+reales, así que se separan responsabilidades:
+
+| Entorno | Para qué | Quién lo usa |
+|---|---|---|
+| **Development** | Escribir y probar en tu máquina | El desarrollador |
+| **Testing / Staging** | Validar "como si fuera real" antes de publicar | Tester / QA |
+| **Production** | La app real, en vivo | Usuarios finales |
+
+El código no cambia entre entornos; **solo cambia la configuración** (connection
+string, API keys, nivel de logging). Ese es justo el objetivo de haber sacado los
+secretos a User Secrets / variables de entorno.
+
+### 7.2 Cómo lo maneja ASP.NET Core
+
+ASP.NET Core lee la variable **`ASPNETCORE_ENVIRONMENT`** y ajusta su comportamiento:
+
+- `Development` → carga `appsettings.Development.json`, carga **User Secrets** (por
+  eso las contraseñas de dev funcionan en local) y muestra páginas de error
+  detalladas.
+- `Production` → **NO** carga User Secrets ni muestra errores detallados (por
+  seguridad); espera que los secretos vengan de **variables de entorno** del
+  servidor.
+
+`Program.cs` no cambia: lee de `Configuration`, y es la fuente de configuración la
+que difiere según el entorno.
+
+### 7.3 Qué cambia al subir a AWS (= entorno Production)
+
+AWS será el entorno de **Production**. Cambia la **configuración**, no el código:
+
+- **Secretos (contraseña de BD y API keys de los LLMs):** dejan de venir de User
+  Secrets (herramienta solo local). Pasan a **variables de entorno** del contenedor
+  o, mejor, a **AWS Secrets Manager / Parameter Store**. ASP.NET Core las lee solo
+  si respetan el nombre con doble guion bajo:
+  `ConnectionStrings__DefaultConnection`, `Anthropic__ApiKey`, `Gemini__ApiKey`.
+- **Base de datos:** deja de ser el contenedor Docker local (puerto 5433 en el
+  host) y pasa a **Amazon RDS** (PostgreSQL gestionado). Solo cambia la connection
+  string: de `Host=localhost;Port=5433` a `Host=...rds.amazonaws.com;Port=5432`.
+
+### 7.4 Archivos que se tocan al desplegar
+
+| Archivo | Estado | ¿Contiene secretos? |
+|---|---|---|
+| `appsettings.json` | ya existe, sin cambios (sin contraseña) | No |
+| `appsettings.Production.json` | **nuevo**, versionado (solo overrides no sensibles: logging, etc.) | No |
+| Variables de entorno / AWS Secrets Manager | configuradas en AWS | **Sí** |
+| `Dockerfile` | **nuevo**, empaqueta la app (ECR → ECS Fargate) | No |
+| `docker-compose.yml` | se queda **solo para desarrollo local** (BD en RDS, no en contenedor propio) | (en `.env`) |
+
+**No se toca código:** `Program.cs`, controllers, models, DTOs, services y
+migraciones quedan igual. Regla mental: **un secreto nunca es un archivo del
+repo** — en local vive en User Secrets, en AWS en variables de entorno / Secrets
+Manager.
+
+### 7.5 Por qué ya estamos preparados
+
+Al mover los secretos fuera del código (contraseña de BD y API keys a User Secrets
+/ variables de entorno), el proyecto quedó listo para desplegar sin reescribir
+nada: en Production solo se le entregan los valores del entorno. Un proyecto con la
+contraseña escrita en `appsettings.json` se rompería o quedaría inseguro al subir a
+la nube; este no.
