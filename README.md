@@ -97,19 +97,43 @@ Aspectos destacados:
  
 **Requisitos:** .NET 10 SDK, Docker.
  
+Los secretos (contraseña de la base de datos y API keys de los LLMs) **no se
+versionan**: viven en **User Secrets** en desarrollo y en variables de entorno en
+producción. Por eso, al clonar el repo hay que configurarlos una vez.
+ 
 ```bash
-# 1. Levantar la base de datos PostgreSQL en Docker
+# 1. Configurar la contraseña de la base de datos para Docker
+#    Copia la plantilla y edita el valor de POSTGRES_PASSWORD.
+cp .env.example .env          # en PowerShell: Copy-Item .env.example .env
+ 
+# 2. Levantar la base de datos PostgreSQL en Docker
+#    El contenedor se publica en el puerto 5433 del host (para no chocar con un
+#    PostgreSQL nativo que use el 5432).
 docker compose up -d
  
-# 2. Aplicar las migraciones
+# 3. Dar a la app la connection string COMPLETA (con la misma contraseña del .env)
+#    vía User Secrets. Sobrescribe la de appsettings.json (que va sin contraseña).
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
+  "Host=localhost;Port=5433;Database=gymtracker;Username=gymtracker_user;Password=TU_CONTRASENA"
+ 
+# 4. (Opcional, solo si usas el Coach IA) Configurar las API keys de los LLMs
+dotnet user-secrets set "Anthropic:ApiKey" "TU_API_KEY_DE_ANTHROPIC"
+dotnet user-secrets set "Gemini:ApiKey" "TU_API_KEY_DE_GEMINI"
+ 
+# 5. Aplicar las migraciones
 dotnet ef database update
  
-# 3. Ejecutar la aplicación
+# 6. Ejecutar la aplicación
 dotnet run
 ```
  
 La aplicación queda disponible en `https://localhost:44353` y la documentación
 de la API (Swagger) en `https://localhost:44353/swagger`.
+ 
+> **Nota sobre el puerto 5432:** si tienes un PostgreSQL instalado de forma nativa
+> en Windows, suele ocupar el 5432 y le robaría las conexiones al contenedor. Por
+> eso el contenedor de GymTracker se publica en **5433**. Si prefieres el 5432,
+> cambia el mapeo en `docker-compose.yml` y el `Port=` de la connection string.
  
 ---
  

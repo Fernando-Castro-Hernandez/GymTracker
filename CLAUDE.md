@@ -27,17 +27,23 @@ Autor: Fernando Castro Hernández.
 
 ## Cómo correr el proyecto
 
+0. Configurar secretos la primera vez (no se versionan; ver "Manejo de secretos"
+   más abajo): crear `.env` a partir de `.env.example` con `POSTGRES_PASSWORD`, y
+   registrar la connection string completa y las API keys en User Secrets.
 1. Levantar la base de datos: `docker compose up -d` (el contenedor se detiene
-   entre sesiones; si la app da error de conexión al puerto 5432, es que el
-   contenedor está apagado).
+   entre sesiones; si la app da error de conexión, es que el contenedor está
+   apagado). El contenedor se publica en el puerto **5433** del host (no 5432),
+   para no chocar con un PostgreSQL nativo de Windows que suele ocupar el 5432.
 2. Aplicar migraciones si hace falta: `dotnet ef database update`.
    IMPORTANTE: detener la app antes de correr comandos `dotnet ef` o `dotnet
    build`, porque IIS Express bloquea el .dll mientras la app está en ejecución.
 3. Correr: `dotnet run` o F5 en Visual Studio.
 4. App en `https://localhost:44353`, Swagger en `https://localhost:44353/swagger`.
 
-Credenciales de la base de datos (docker-compose): usuario `gymtracker_user`,
-base `gymtracker`. Para inspeccionar la BD:
+Credenciales de la base de datos: usuario `gymtracker_user`, base `gymtracker`.
+La contraseña vive en `.env` (Docker) y en User Secrets (la app), nunca en el
+repo. Para inspeccionar la BD desde dentro del contenedor (no necesita puerto ni
+contraseña por el socket local):
 `docker exec -it gymtracker-db psql -U gymtracker_user -d gymtracker`.
 
 ## Estructura del proyecto
@@ -57,7 +63,10 @@ GymTracker/
 ├── Services/
 │   ├── Volumen/         # Patrones GOF: Strategy (ICalculoVolumen + 3 estrategias)
 │   │                    #   y Factory Method (CalculoVolumenFactory) — ADR-05
-│   └── Progreso/        # ProgresoService: agregación de datos para las gráficas
+│   ├── Progreso/        # ProgresoService: agregación de datos para las gráficas
+│   └── IA/              # Coach IA: IProveedorIA, ClaudeProveedor, GeminiProveedor,
+│                        #   ProveedorIAConFallback, CoachService
+├── SeedData/            # exercises.json: seed local del catálogo (1324 ejercicios)
 ├── Data/                # ApplicationDbContext (EF Core)
 ├── Migrations/          # Migraciones de EF Core
 ├── Views/               # Vistas Razor (Ejercicios/, Rutinas/, Sesiones/,
@@ -99,9 +108,42 @@ El proyecto documenta sus decisiones en `docs/ADR/`. Resumen:
   de volumen de entrenamiento (sobre las metas de la rutina). La gráfica de
   volumen real reutiliza el mismo concepto de tonelaje sobre series ejecutadas.
 
-Las integraciones de IA y API de terceros (Coach IA, catálogo enriquecido, etc.)
-están documentadas como propuesta futura en `docs/PLAN-integraciones-IA.md`. NO
-están implementadas y no deben implementarse sin planeación explícita.
+### Integraciones de IA (Coach)
+
+El **Coach IA está implementado** en `Services/IA/`. Analiza una rutina (balance
+muscular y volumen) usando un LLM y devuelve recomendaciones. Diseño:
+
+- `IProveedorIA` — interfaz común para los proveedores de LLM.
+- `ClaudeProveedor` — proveedor principal, Claude Haiku vía el SDK oficial de
+  Anthropic. Usa "prompted JSON" con parseo defensivo.
+- `GeminiProveedor` — proveedor de fallback, Gemini Flash vía `Google.GenAI`.
+- `ProveedorIAConFallback` — orquesta el orden Claude → Gemini: si el primero
+  falla, cae al siguiente.
+- `CoachService` — orquestador que prepara los datos de la rutina y llama al
+  proveedor.
+
+Las **API keys nunca van en el código ni en `appsettings.json`**: se leen de
+configuración (`Anthropic:ApiKey`, `Gemini:ApiKey`) en `Program.cs`, con User
+Secrets en desarrollo y variables de entorno en producción.
+
+El **catálogo enriquecido con GIFs ya está implementado** vía un seed local
+(`SeedData/exercises.json`, 1324 ejercicios), sin llamar a APIs de terceros en
+runtime. El resto de la hoja de ruta (generador de rutinas con IA, etc.) sigue
+como propuesta en `docs/PLAN-integraciones-IA.md` y no debe implementarse sin
+planeación explícita.
+
+## Manejo de secretos
+
+Ningún secreto se versiona. Reglas:
+
+- **Contraseña de PostgreSQL:** `docker-compose.yml` la lee de `${POSTGRES_PASSWORD}`,
+  definida en un `.env` local (ignorado por git; hay un `.env.example` versionado
+  como guía). La app la recibe en la connection string **completa** guardada en
+  User Secrets (`ConnectionStrings:DefaultConnection`), que sobrescribe la de
+  `appsettings.json` (esa va sin contraseña, solo como referencia).
+- **API keys de LLMs:** solo en User Secrets (dev) / variables de entorno (prod).
+- `appsettings.json` y `docker-compose.yml` **no deben** contener contraseñas ni
+  keys en texto plano. Al añadir un secreto nuevo, seguir este mismo patrón.
 
 ## Convenciones importantes
 
