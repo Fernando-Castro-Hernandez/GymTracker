@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Capa de Infraestructura (ADR-03): ApplicationDbContext (EF Core), migraciones,
+       PostgreSQL e Identity. Implementa la persistencia que Application define.
+       Depende de Domain (entidades) y Application (interfaces que implementa). -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7" PrivateAssets="all" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GymTracker.Domain\GymTracker.Domain.csproj" />
+    <ProjectReference Include="..\GymTracker.Application\GymTracker.Application.csproj" />
+  </ItemGroup>
+
+</Project>

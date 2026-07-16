@@ -5,22 +5,27 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-GymTracker-66be3101-6f9a-4ea7-9373-f8df7b4ee675</UserSecretsId>
+    <RootNamespace>GymTracker</RootNamespace>
   </PropertyGroup>
 
+  <!-- Capa de Presentación (ADR-03): MVC (controllers + vistas Razor), la API REST
+       + Swagger, Identity UI y wwwroot. Es el composition root: referencia a
+       Application e Infrastructure y arma la inyección de dependencias en Program.cs. -->
   <ItemGroup>
-    <PackageReference Include="Anthropic" Version="12.35.1" />
-    <PackageReference Include="Google.GenAI" Version="1.13.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7" PrivateAssets="all" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.7" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.2" />
   </ItemGroup>
 
-  <!-- Seed local del catalogo de ejercicios: se lee en runtime, se copia al
-       output y al publish para que funcione en local y en el despliegue (AWS). -->
+  <ItemGroup>
+    <ProjectReference Include="..\GymTracker.Application\GymTracker.Application.csproj" />
+    <ProjectReference Include="..\GymTracker.Infrastructure\GymTracker.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!-- Seed local del catalogo de ejercicios: se lee en runtime desde el content
+       root de Web, se copia al output y al publish (local y despliegue AWS). -->
   <ItemGroup>
     <Content Update="SeedData\exercises.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

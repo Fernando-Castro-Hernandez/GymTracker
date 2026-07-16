@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Capa de Aplicación (ADR-03): servicios con la lógica de negocio, DTOs e
+       interfaces (incluida IApplicationDbContext). Depende solo de Domain.
+       Referencia EF Core para las operaciones LINQ async sobre IApplicationDbContext,
+       pero NO conoce a Infrastructure. -->
+  <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.35.1" />
+    <PackageReference Include="Google.GenAI" Version="1.13.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GymTracker.Domain\GymTracker.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

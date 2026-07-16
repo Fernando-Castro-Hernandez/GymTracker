@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Capa de Dominio (ADR-03): entidades y enums del negocio.
+       No depende de ninguna otra capa ni de frameworks externos. -->
+
+</Project>
