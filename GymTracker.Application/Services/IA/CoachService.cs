@@ -1,4 +1,4 @@
-﻿using GymTracker.Data;
+﻿using GymTracker.Application.Abstractions;
 using GymTracker.Services.Volumen;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
@@ -9,7 +9,7 @@ namespace GymTracker.Services.IA
     // del ADR-05, arma el contexto y el prompt, y delega la llamada al modelo en
     // un IProveedorIA (Claude hoy; con fallback en la Fase 2).
     public class CoachService(
-        ApplicationDbContext context,
+        IApplicationDbContext context,
         CalculoVolumenFactory volumenFactory,
         IProveedorIA proveedor)
     {

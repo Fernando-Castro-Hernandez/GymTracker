@@ -1,16 +1,17 @@
-﻿using GymTracker.Data;
+using GymTracker.Application.Services.Ejercicios;
 using GymTracker.Models;
+using GymTracker.Models.Enums;
+using GymTracker.Services.Catalogo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace GymTracker.Controllers
 {
     [Authorize]
     public class EjerciciosController(
-        ApplicationDbContext context,
-        GymTracker.Services.Catalogo.CatalogoService catalogo) : Controller
+        IEjercicioService ejercicios,
+        CatalogoService catalogo) : Controller
     {
         // ===== Helper: obtener el Id del usuario logueado =====
         private string ObtenerUsuarioId() =>
@@ -19,37 +20,23 @@ namespace GymTracker.Controllers
         // ===== Index: listado con filtro opcional por grupo muscular =====
         public async Task<IActionResult> Index(string? grupo)
         {
-            var usuarioId = ObtenerUsuarioId();
+            // Parsear el filtro de la query (presentación) a enum antes de consultar.
+            GrupoMuscular? grupoFiltro = null;
+            if (!string.IsNullOrEmpty(grupo) && Enum.TryParse<GrupoMuscular>(grupo, out var g))
+                grupoFiltro = g;
 
-            var consulta = context.Ejercicios
-                .Where(e => e.UsuarioId == usuarioId);
+            var lista = await ejercicios.ListarAsync(ObtenerUsuarioId(), grupoFiltro);
 
-            if (!string.IsNullOrEmpty(grupo))
-            {
-                if (Enum.TryParse<Models.Enums.GrupoMuscular>(grupo, out var grupoEnum))
-                {
-                    consulta = consulta.Where(e => e.GrupoMuscular == grupoEnum);
-                }
-            }
-
-            var ejercicios = await consulta
-                .OrderBy(e => e.Nombre)
-                .ToListAsync();
-
-            ViewBag.Grupos = Enum.GetNames(typeof(Models.Enums.GrupoMuscular));
+            ViewBag.Grupos = Enum.GetNames(typeof(GrupoMuscular));
             ViewBag.GrupoActual = grupo;
 
-            return View(ejercicios);
+            return View(lista);
         }
 
         // ===== Detalle =====
         public async Task<IActionResult> Detalle(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var ejercicio = await context.Ejercicios
-                .FirstOrDefaultAsync(e => e.Id == id && e.UsuarioId == usuarioId);
-
+            var ejercicio = await ejercicios.ObtenerAsync(id, ObtenerUsuarioId());
             return ejercicio == null ? NotFound() : View(ejercicio);
         }
 
@@ -64,9 +51,7 @@ namespace GymTracker.Controllers
         public async Task<IActionResult> Agregar(Ejercicio ejercicio)
         {
             ejercicio.UsuarioId = ObtenerUsuarioId();
-
-            context.Ejercicios.Add(ejercicio);
-            await context.SaveChangesAsync();
+            await ejercicios.CrearAsync(ejercicio);
 
             return RedirectToAction(nameof(Index));
         }
@@ -74,11 +59,7 @@ namespace GymTracker.Controllers
         // ===== Editar GET =====
         public async Task<IActionResult> Editar(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var ejercicio = await context.Ejercicios
-                .FirstOrDefaultAsync(e => e.Id == id && e.UsuarioId == usuarioId);
-
+            var ejercicio = await ejercicios.ObtenerAsync(id, ObtenerUsuarioId());
             if (ejercicio == null) return NotFound();
 
             // Si está vinculado a un ejercicio del catálogo, resolver su nombre y GIF
@@ -97,20 +78,8 @@ namespace GymTracker.Controllers
         [HttpPost]
         public async Task<IActionResult> Editar(int id, Ejercicio ejercicio)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            // Validar que el ejercicio existe y es del usuario
-            var original = await context.Ejercicios
-                .FirstOrDefaultAsync(e => e.Id == id && e.UsuarioId == usuarioId);
-
-            if (original == null) return NotFound();
-
-            // Actualizar solo los campos editables
-            original.Nombre = ejercicio.Nombre;
-            original.GrupoMuscular = ejercicio.GrupoMuscular;
-            original.Descripcion = ejercicio.Descripcion;
-
-            await context.SaveChangesAsync();
+            var ok = await ejercicios.ActualizarAsync(id, ObtenerUsuarioId(), ejercicio);
+            if (!ok) return NotFound();
 
             return RedirectToAction(nameof(Index));
         }
@@ -118,11 +87,7 @@ namespace GymTracker.Controllers
         // ===== Eliminar GET (confirmación) =====
         public async Task<IActionResult> Eliminar(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var ejercicio = await context.Ejercicios
-                .FirstOrDefaultAsync(e => e.Id == id && e.UsuarioId == usuarioId);
-
+            var ejercicio = await ejercicios.ObtenerAsync(id, ObtenerUsuarioId());
             return ejercicio == null ? NotFound() : View(ejercicio);
         }
 
@@ -130,15 +95,8 @@ namespace GymTracker.Controllers
         [HttpPost, ActionName("Eliminar")]
         public async Task<IActionResult> EliminarConfirmado(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var ejercicio = await context.Ejercicios
-                .FirstOrDefaultAsync(e => e.Id == id && e.UsuarioId == usuarioId);
-
-            if (ejercicio == null) return NotFound();
-
-            context.Ejercicios.Remove(ejercicio);
-            await context.SaveChangesAsync();
+            var ok = await ejercicios.EliminarAsync(id, ObtenerUsuarioId());
+            if (!ok) return NotFound();
 
             return RedirectToAction(nameof(Index));
         }
@@ -150,19 +108,15 @@ namespace GymTracker.Controllers
         [HttpGet]
         public async Task<IActionResult> Mios()
         {
-            var usuarioId = ObtenerUsuarioId();
+            var lista = await ejercicios.ListarParaSelectorAsync(ObtenerUsuarioId());
 
-            var mios = await context.Ejercicios
-                .Where(e => e.UsuarioId == usuarioId)
-                .OrderBy(e => e.Nombre)
-                .Select(e => new
-                {
-                    id = e.Id,
-                    nombre = e.Nombre,
-                    grupo = e.GrupoMuscular.ToString(),
-                    exerciseDbId = e.ExerciseDbId
-                })
-                .ToListAsync();
+            var mios = lista.Select(e => new
+            {
+                id = e.Id,
+                nombre = e.Nombre,
+                grupo = e.GrupoMuscular.ToString(),
+                exerciseDbId = e.ExerciseDbId
+            });
 
             return Json(mios);
         }
@@ -181,14 +135,9 @@ namespace GymTracker.Controllers
             if (delCatalogo == null)
                 return NotFound(new { ok = false, error = "Ese ejercicio del catálogo no existe." });
 
-            var usuarioId = ObtenerUsuarioId();
-            var ejercicio = await context.Ejercicios
-                .FirstOrDefaultAsync(e => e.Id == ejercicioId && e.UsuarioId == usuarioId);
+            var ejercicio = await ejercicios.FijarExerciseDbIdAsync(ejercicioId, ObtenerUsuarioId(), exerciseDbId);
             if (ejercicio == null)
                 return NotFound(new { ok = false, error = "No se encontró tu ejercicio." });
-
-            ejercicio.ExerciseDbId = exerciseDbId;
-            await context.SaveChangesAsync();
 
             return Json(new { ok = true, ejercicioId, nombre = ejercicio.Nombre });
         }
@@ -198,14 +147,8 @@ namespace GymTracker.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Desvincular(int ejercicioId)
         {
-            var usuarioId = ObtenerUsuarioId();
-            var ejercicio = await context.Ejercicios
-                .FirstOrDefaultAsync(e => e.Id == ejercicioId && e.UsuarioId == usuarioId);
-            if (ejercicio == null)
-                return NotFound(new { ok = false });
-
-            ejercicio.ExerciseDbId = null;
-            await context.SaveChangesAsync();
+            var ejercicio = await ejercicios.FijarExerciseDbIdAsync(ejercicioId, ObtenerUsuarioId(), null);
+            if (ejercicio == null) return NotFound(new { ok = false });
 
             return Json(new { ok = true, ejercicioId });
         }

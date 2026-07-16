@@ -1,14 +1,13 @@
-﻿using GymTracker.Data;
+using GymTracker.Application.Services.Mediciones;
 using GymTracker.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace GymTracker.Controllers
 {
     [Authorize]
-    public class MedicionesController(ApplicationDbContext context) : Controller
+    public class MedicionesController(IMedicionService mediciones) : Controller
     {
         // ===== Helper: obtener el Id del usuario logueado =====
         private string ObtenerUsuarioId() =>
@@ -17,24 +16,14 @@ namespace GymTracker.Controllers
         // ===== Index: historial de mediciones, más reciente primero =====
         public async Task<IActionResult> Index()
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var mediciones = await context.Mediciones
-                .Where(m => m.UsuarioId == usuarioId)
-                .OrderByDescending(m => m.Fecha)
-                .ToListAsync();
-
-            return View(mediciones);
+            var lista = await mediciones.ListarAsync(ObtenerUsuarioId());
+            return View(lista);
         }
 
         // ===== Detalle: ver una medición completa =====
         public async Task<IActionResult> Detalle(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var medicion = await context.Mediciones
-                .FirstOrDefaultAsync(m => m.Id == id && m.UsuarioId == usuarioId);
-
+            var medicion = await mediciones.ObtenerAsync(id, ObtenerUsuarioId());
             if (medicion == null) return NotFound();
 
             return View(medicion);
@@ -48,8 +37,6 @@ namespace GymTracker.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Crear(Medicion medicion)
         {
-            var usuarioId = ObtenerUsuarioId();
-
             // Validación mínima: el peso debe ser positivo.
             if (medicion.Peso <= 0)
             {
@@ -58,24 +45,17 @@ namespace GymTracker.Controllers
 
             if (!ModelState.IsValid) return View(medicion);
 
-            // Asignar propietario y guardar. El resto de campos vienen del formulario;
+            // Asignar propietario. El resto de campos vienen del formulario;
             // los que el usuario dejó vacíos llegan como null (opcionales).
-            medicion.UsuarioId = usuarioId;
+            medicion.UsuarioId = ObtenerUsuarioId();
 
-            // Si no se especificó fecha, usar ahora (UTC).
-            if (medicion.Fecha == default)
-            {
-                medicion.Fecha = DateTime.UtcNow;
-            }
-            else
-            {
-                // La fecha viene del input datetime-local como hora local sin Kind.
-                // La interpretamos como local y la convertimos a UTC para PostgreSQL.
-                medicion.Fecha = DateTime.SpecifyKind(medicion.Fecha, DateTimeKind.Local).ToUniversalTime();
-            }
+            // Normalizar la fecha: si no se especificó, ahora (UTC); si vino del
+            // input datetime-local (hora local sin Kind), convertir a UTC.
+            medicion.Fecha = medicion.Fecha == default
+                ? DateTime.UtcNow
+                : DateTime.SpecifyKind(medicion.Fecha, DateTimeKind.Local).ToUniversalTime();
 
-            context.Mediciones.Add(medicion);
-            await context.SaveChangesAsync();
+            await mediciones.CrearAsync(medicion);
 
             return RedirectToAction(nameof(Index));
         }
@@ -83,11 +63,7 @@ namespace GymTracker.Controllers
         // ===== Editar GET =====
         public async Task<IActionResult> Editar(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var medicion = await context.Mediciones
-                .FirstOrDefaultAsync(m => m.Id == id && m.UsuarioId == usuarioId);
-
+            var medicion = await mediciones.ObtenerAsync(id, ObtenerUsuarioId());
             if (medicion == null) return NotFound();
 
             return View(medicion);
@@ -98,14 +74,6 @@ namespace GymTracker.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Editar(int id, Medicion medicion)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            // Cargar la medición original (rastreada) validando ownership.
-            var original = await context.Mediciones
-                .FirstOrDefaultAsync(m => m.Id == id && m.UsuarioId == usuarioId);
-
-            if (original == null) return NotFound();
-
             if (medicion.Peso <= 0)
             {
                 ModelState.AddModelError(nameof(Medicion.Peso), "El peso debe ser mayor que cero.");
@@ -113,24 +81,15 @@ namespace GymTracker.Controllers
 
             if (!ModelState.IsValid) return View(medicion);
 
-            // Copiar solo los campos editables sobre la entidad rastreada.
-            // No se toca UsuarioId ni Id: el ownership queda blindado.
-            original.Fecha = medicion.Fecha == default
-                ? original.Fecha
-                : DateTime.SpecifyKind(medicion.Fecha, DateTimeKind.Local).ToUniversalTime();
-            original.Peso = medicion.Peso;
-            original.PorcentajeGrasa = medicion.PorcentajeGrasa;
-            original.GrasaVisceral = medicion.GrasaVisceral;
-            original.MasaMuscular = medicion.MasaMuscular;
-            original.PorcentajeAgua = medicion.PorcentajeAgua;
-            original.Cintura = medicion.Cintura;
-            original.Cadera = medicion.Cadera;
-            original.Pecho = medicion.Pecho;
-            original.Brazo = medicion.Brazo;
-            original.Muslo = medicion.Muslo;
-            original.Notas = medicion.Notas;
+            // Normalizar la fecha del formulario a UTC antes de pasarla al servicio.
+            // (default => el servicio conserva la fecha original.)
+            if (medicion.Fecha != default)
+            {
+                medicion.Fecha = DateTime.SpecifyKind(medicion.Fecha, DateTimeKind.Local).ToUniversalTime();
+            }
 
-            await context.SaveChangesAsync();
+            var ok = await mediciones.ActualizarAsync(id, ObtenerUsuarioId(), medicion);
+            if (!ok) return NotFound();
 
             return RedirectToAction(nameof(Index));
         }
@@ -140,15 +99,8 @@ namespace GymTracker.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Eliminar(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var medicion = await context.Mediciones
-                .FirstOrDefaultAsync(m => m.Id == id && m.UsuarioId == usuarioId);
-
-            if (medicion == null) return NotFound();
-
-            context.Mediciones.Remove(medicion);
-            await context.SaveChangesAsync();
+            var ok = await mediciones.EliminarAsync(id, ObtenerUsuarioId());
+            if (!ok) return NotFound();
 
             return RedirectToAction(nameof(Index));
         }

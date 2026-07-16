@@ -1,14 +1,12 @@
-﻿using GymTracker.Data;
-using GymTracker.Models;
+using GymTracker.Application.Services.Ejercicios;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace GymTracker.Controllers
 {
     [Authorize]
-    public class ProgresoController(ApplicationDbContext context) : Controller
+    public class ProgresoController(IEjercicioService ejercicios) : Controller
     {
         private string ObtenerUsuarioId() =>
             User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -18,14 +16,8 @@ namespace GymTracker.Controllers
         // aquí solo pasamos la lista de ejercicios del usuario para el selector.
         public async Task<IActionResult> Index()
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var ejercicios = await context.Ejercicios
-                .Where(e => e.UsuarioId == usuarioId)
-                .OrderBy(e => e.Nombre)
-                .ToListAsync();
-
-            return View(ejercicios);
+            var lista = await ejercicios.ListarAsync(ObtenerUsuarioId(), grupo: null);
+            return View(lista);
         }
     }
 }

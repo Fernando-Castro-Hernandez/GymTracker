@@ -1,17 +1,16 @@
-﻿using GymTracker.Data;
-using GymTracker.Models;
+using GymTracker.Application.Services.Sesiones;
 using GymTracker.Models.ViewModels;
+using GymTracker.Services.Catalogo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace GymTracker.Controllers
 {
     [Authorize]
     public class SesionesController(
-        ApplicationDbContext context,
-        GymTracker.Services.Catalogo.CatalogoService catalogo) : Controller
+        ISesionService sesiones,
+        CatalogoService catalogo) : Controller
     {
         // ===== Helper: obtener el Id del usuario logueado =====
         private string ObtenerUsuarioId() =>
@@ -20,15 +19,8 @@ namespace GymTracker.Controllers
         // ===== Index: historial de sesiones del usuario =====
         public async Task<IActionResult> Index()
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var sesiones = await context.Sesiones
-                .Include(s => s.Series)
-                .Where(s => s.UsuarioId == usuarioId)
-                .OrderByDescending(s => s.Fecha)
-                .ToListAsync();
-
-            return View(sesiones);
+            var lista = await sesiones.ListarAsync(ObtenerUsuarioId());
+            return View(lista);
         }
 
         // ===== Iniciar POST: crea una sesión congelando la rutina del momento =====
@@ -37,53 +29,11 @@ namespace GymTracker.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Iniciar(int rutinaId)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            // Cargar la rutina CON sus ejercicios y el Ejercicio relacionado,
-            // para poder copiar (congelar) todos los datos del momento.
-            var rutina = await context.Rutinas
-                .Include(r => r.Ejercicios)
-                    .ThenInclude(re => re.Ejercicio)
-                .FirstOrDefaultAsync(r => r.Id == rutinaId && r.UsuarioId == usuarioId);
-
-            if (rutina == null) return NotFound();
-
-            // Crear la sesión, congelando el nombre de la rutina.
-            var sesion = new Sesion
-            {
-                UsuarioId = usuarioId,
-                RutinaId = rutina.Id,
-                NombreRutina = rutina.Nombre,
-                Fecha = DateTime.UtcNow
-            };
-
-            // Por cada ejercicio de la rutina, y por cada serie objetivo,
-            // crear una SerieRealizada pre-cargada con la meta como valor inicial
-            // (Opción A: los campos reales arrancan igualando la meta).
-            foreach (var re in rutina.Ejercicios.OrderBy(re => re.Orden))
-            {
-                for (int numero = 1; numero <= re.SeriesObjetivo; numero++)
-                {
-                    sesion.Series.Add(new SerieRealizada
-                    {
-                        EjercicioId = re.EjercicioId,
-                        NombreEjercicio = re.Ejercicio.Nombre,
-                        GrupoMuscular = re.Ejercicio.GrupoMuscular,
-                        NumeroSerie = numero,
-                        RepeticionesObjetivo = re.RepeticionesObjetivo,
-                        PesoObjetivo = re.PesoObjetivo,
-                        // Valores reales pre-cargados con la meta (el usuario ajusta).
-                        RepeticionesReales = re.RepeticionesObjetivo,
-                        PesoReal = re.PesoObjetivo
-                    });
-                }
-            }
-
-            context.Sesiones.Add(sesion);
-            await context.SaveChangesAsync();
+            var sesionId = await sesiones.IniciarDesdeRutinaAsync(rutinaId, ObtenerUsuarioId());
+            if (sesionId == null) return NotFound();
 
             // Ir directo a registrar la sesión recién creada.
-            return RedirectToAction(nameof(Registrar), new { id = sesion.Id });
+            return RedirectToAction(nameof(Registrar), new { id = sesionId.Value });
         }
 
         // ===== Registrar GET: pantalla para capturar reps y peso reales =====
@@ -91,20 +41,14 @@ namespace GymTracker.Controllers
         {
             var usuarioId = ObtenerUsuarioId();
 
-            var sesion = await context.Sesiones
-                .Include(s => s.Series)
-                .FirstOrDefaultAsync(s => s.Id == id && s.UsuarioId == usuarioId);
-
+            var sesion = await sesiones.ObtenerConSeriesAsync(id, usuarioId);
             if (sesion == null) return NotFound();
 
             // Resolver el GIF de cada ejercicio EN VIVO desde el ejercicio actual
             // (el snapshot guarda EjercicioId; el GIF es ayuda visual, no historial).
-            var ejercicioIds = sesion.Series.Select(s => s.EjercicioId).Distinct().ToList();
-            var vinculos = await context.Ejercicios
-                .Where(e => e.UsuarioId == usuarioId && ejercicioIds.Contains(e.Id))
-                .Select(e => new { e.Id, e.ExerciseDbId })
-                .ToListAsync();
-            var gifs = catalogo.ResolverGifs(vinculos.Select(v => (v.Id, v.ExerciseDbId)));
+            var ejercicioIds = sesion.Series.Select(s => s.EjercicioId).Distinct();
+            var vinculos = await sesiones.ObtenerVinculosGifAsync(usuarioId, ejercicioIds);
+            var gifs = catalogo.ResolverGifs(vinculos);
 
             // Mapear la entidad a un ViewModel que solo expone lo editable.
             var modelo = new RegistrarSesionViewModel
@@ -139,45 +83,25 @@ namespace GymTracker.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Registrar(RegistrarSesionViewModel modelo)
         {
-            var usuarioId = ObtenerUsuarioId();
+            // Convertir las series editadas del formulario en un mapa
+            // serieId -> (repsReales, pesoReal) que el servicio aplica sobre la
+            // sesión (solo toca series que pertenezcan a esa sesión/usuario).
+            var valores = modelo.Series.ToDictionary(
+                s => s.Id,
+                s => (s.RepeticionesReales, s.PesoReal));
 
-            // Cargar la sesión real CON sus series (rastreadas por EF Core).
-            var sesion = await context.Sesiones
-                .Include(s => s.Series)
-                .FirstOrDefaultAsync(s => s.Id == modelo.SesionId && s.UsuarioId == usuarioId);
-
-            if (sesion == null) return NotFound();
-
-            // Guardar las notas de la sesión.
-            sesion.Notas = modelo.Notas;
-
-            // Actualizar SOLO los valores reales de cada serie.
-            // Se busca cada serie por su Id dentro de las series de ESTA sesión,
-            // de modo que no se pueda tocar una serie de otra sesión/usuario.
-            foreach (var serieEditada in modelo.Series)
-            {
-                var serie = sesion.Series.FirstOrDefault(s => s.Id == serieEditada.Id);
-                if (serie == null) continue; // ignora ids que no pertenezcan a la sesión
-
-                serie.RepeticionesReales = serieEditada.RepeticionesReales;
-                serie.PesoReal = serieEditada.PesoReal;
-            }
-
-            await context.SaveChangesAsync();
+            var ok = await sesiones.GuardarRealesAsync(
+                modelo.SesionId, ObtenerUsuarioId(), modelo.Notas, valores);
+            if (!ok) return NotFound();
 
             // Ir al detalle de la sesión (solo lectura) para ver el resumen.
-            return RedirectToAction(nameof(Detalle), new { id = sesion.Id });
+            return RedirectToAction(nameof(Detalle), new { id = modelo.SesionId });
         }
 
         // ===== Detalle GET: ver una sesión pasada (solo lectura) =====
         public async Task<IActionResult> Detalle(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var sesion = await context.Sesiones
-                .Include(s => s.Series)
-                .FirstOrDefaultAsync(s => s.Id == id && s.UsuarioId == usuarioId);
-
+            var sesion = await sesiones.ObtenerConSeriesAsync(id, ObtenerUsuarioId());
             if (sesion == null) return NotFound();
 
             sesion.Series = sesion.Series
@@ -193,15 +117,8 @@ namespace GymTracker.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Eliminar(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var sesion = await context.Sesiones
-                .FirstOrDefaultAsync(s => s.Id == id && s.UsuarioId == usuarioId);
-
-            if (sesion == null) return NotFound();
-
-            context.Sesiones.Remove(sesion);
-            await context.SaveChangesAsync();
+            var ok = await sesiones.EliminarAsync(id, ObtenerUsuarioId());
+            if (!ok) return NotFound();
 
             return RedirectToAction(nameof(Index));
         }

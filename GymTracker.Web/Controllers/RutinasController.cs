@@ -1,17 +1,17 @@
-﻿using GymTracker.Data;
+using GymTracker.Application.Services.Rutinas;
 using GymTracker.Models;
+using GymTracker.Models.ViewModels;
+using GymTracker.Services.Catalogo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using GymTracker.Models.ViewModels;
 
 namespace GymTracker.Controllers
 {
     [Authorize]
     public class RutinasController(
-        ApplicationDbContext context,
-        GymTracker.Services.Catalogo.CatalogoService catalogo) : Controller
+        IRutinaService rutinas,
+        CatalogoService catalogo) : Controller
     {
         // ===== Helper: obtener el Id del usuario logueado =====
         private string ObtenerUsuarioId() =>
@@ -20,26 +20,14 @@ namespace GymTracker.Controllers
         // ===== Index: listado de rutinas del usuario =====
         public async Task<IActionResult> Index()
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var rutinas = await context.Rutinas
-                .Where(r => r.UsuarioId == usuarioId)
-                .OrderByDescending(r => r.FechaCreacion)
-                .ToListAsync();
-
-            return View(rutinas);
+            var lista = await rutinas.ListarAsync(ObtenerUsuarioId());
+            return View(lista);
         }
 
         // ===== Detalle: muestra la rutina con sus ejercicios =====
         public async Task<IActionResult> Detalle(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var rutina = await context.Rutinas
-                .Include(r => r.Ejercicios)
-                    .ThenInclude(re => re.Ejercicio)
-                .FirstOrDefaultAsync(r => r.Id == id && r.UsuarioId == usuarioId);
-
+            var rutina = await rutinas.ObtenerConEjerciciosAsync(id, ObtenerUsuarioId());
             if (rutina == null) return NotFound();
 
             // Resolver el GIF de cada ejercicio vinculado (para el modal de animación).
@@ -52,15 +40,8 @@ namespace GymTracker.Controllers
         // ===== Agregar GET =====
         public async Task<IActionResult> Agregar()
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            // Cargar los ejercicios disponibles del usuario para el dropdown
-            var ejerciciosDisponibles = await context.Ejercicios
-                .Where(e => e.UsuarioId == usuarioId)
-                .OrderBy(e => e.Nombre)
-                .ToListAsync();
-
-            ViewBag.EjerciciosDisponibles = ejerciciosDisponibles;
+            ViewBag.EjerciciosDisponibles =
+                await rutinas.ListarEjerciciosDisponiblesAsync(ObtenerUsuarioId());
             return View();
         }
 
@@ -77,22 +58,14 @@ namespace GymTracker.Controllers
             }
 
             // Validación 2: todos los EjercicioId deben pertenecer al usuario actual
-            if (modelo.Ejercicios.Any())
+            var ok = await rutinas.EjerciciosPertenecenAlUsuarioAsync(
+                usuarioId, modelo.Ejercicios.Select(e => e.EjercicioId));
+            if (!ok)
             {
-                var idsEnviados = modelo.Ejercicios.Select(e => e.EjercicioId).Distinct().ToList();
-
-                var idsValidos = await context.Ejercicios
-                    .Where(e => e.UsuarioId == usuarioId && idsEnviados.Contains(e.Id))
-                    .Select(e => e.Id)
-                    .ToListAsync();
-
-                if (idsValidos.Count != idsEnviados.Count)
-                {
-                    return BadRequest("Uno o más ejercicios no son válidos o no te pertenecen.");
-                }
+                return BadRequest("Uno o más ejercicios no son válidos o no te pertenecen.");
             }
 
-            // Crear la entidad Rutina
+            // Crear la entidad Rutina con sus ejercicios asignados.
             var rutina = new Rutina
             {
                 Nombre = modelo.Nombre.Trim(),
@@ -101,7 +74,6 @@ namespace GymTracker.Controllers
                 FechaCreacion = DateTime.UtcNow
             };
 
-            // Agregar los ejercicios asignados (si los hay)
             int orden = 1;
             foreach (var ej in modelo.Ejercicios)
             {
@@ -115,11 +87,8 @@ namespace GymTracker.Controllers
                 });
             }
 
-            // Guardar todo en una sola transacción
-            context.Rutinas.Add(rutina);
-            await context.SaveChangesAsync();
-
-            return Ok(new { rutinaId = rutina.Id });
+            var rutinaId = await rutinas.CrearAsync(rutina);
+            return Ok(new { rutinaId });
         }
 
         // ===== Editar GET =====
@@ -127,22 +96,11 @@ namespace GymTracker.Controllers
         {
             var usuarioId = ObtenerUsuarioId();
 
-            // Cargar la rutina CON sus ejercicios actuales (y el Ejercicio relacionado,
-            // para poder mostrar nombre y grupo muscular en la tabla pre-llenada)
-            var rutina = await context.Rutinas
-                .Include(r => r.Ejercicios)
-                    .ThenInclude(re => re.Ejercicio)
-                .FirstOrDefaultAsync(r => r.Id == id && r.UsuarioId == usuarioId);
-
+            var rutina = await rutinas.ObtenerConEjerciciosAsync(id, usuarioId);
             if (rutina == null) return NotFound();
 
-            // Cargar los ejercicios disponibles del usuario para el dropdown
-            var ejerciciosDisponibles = await context.Ejercicios
-                .Where(e => e.UsuarioId == usuarioId)
-                .OrderBy(e => e.Nombre)
-                .ToListAsync();
-
-            ViewBag.EjerciciosDisponibles = ejerciciosDisponibles;
+            ViewBag.EjerciciosDisponibles =
+                await rutinas.ListarEjerciciosDisponiblesAsync(usuarioId);
 
             // Mapear la entidad a un ViewModel con sus ejercicios ya cargados,
             // para que el JavaScript de la vista pueda pre-llenar la tabla.
@@ -174,14 +132,6 @@ namespace GymTracker.Controllers
         {
             var usuarioId = ObtenerUsuarioId();
 
-            // Cargar la rutina original CON sus ejercicios (necesarios para reemplazarlos)
-            var original = await context.Rutinas
-                .Include(r => r.Ejercicios)
-                .FirstOrDefaultAsync(r => r.Id == id && r.UsuarioId == usuarioId);
-
-            // Validación de ownership: si no existe o no es del usuario, 404
-            if (original == null) return NotFound();
-
             // Validación 1: nombre obligatorio
             if (string.IsNullOrWhiteSpace(modelo.Nombre))
             {
@@ -189,59 +139,37 @@ namespace GymTracker.Controllers
             }
 
             // Validación 2: todos los EjercicioId deben pertenecer al usuario actual
-            if (modelo.Ejercicios.Any())
+            var pertenecen = await rutinas.EjerciciosPertenecenAlUsuarioAsync(
+                usuarioId, modelo.Ejercicios.Select(e => e.EjercicioId));
+            if (!pertenecen)
             {
-                var idsEnviados = modelo.Ejercicios.Select(e => e.EjercicioId).Distinct().ToList();
-
-                var idsValidos = await context.Ejercicios
-                    .Where(e => e.UsuarioId == usuarioId && idsEnviados.Contains(e.Id))
-                    .Select(e => e.Id)
-                    .ToListAsync();
-
-                if (idsValidos.Count != idsEnviados.Count)
-                {
-                    return BadRequest("Uno o más ejercicios no son válidos o no te pertenecen.");
-                }
+                return BadRequest("Uno o más ejercicios no son válidos o no te pertenecen.");
             }
 
-            // Actualizar los campos básicos
-            original.Nombre = modelo.Nombre.Trim();
-            original.Descripcion = modelo.Descripcion?.Trim();
-
-            // ===== Estrategia delete-and-replace para los ejercicios =====
-            // Quitar todos los RutinaEjercicio actuales y recrearlos desde lo que
-            // mandó el cliente. Más simple y predecible que un diff incremental.
-            // EF Core rastrea las eliminaciones e inserciones y las aplica en
-            // una sola transacción al llamar SaveChangesAsync().
-            original.Ejercicios.Clear();
-
+            // Construir los RutinaEjercicio nuevos desde el modelo (orden 1..N).
             int orden = 1;
-            foreach (var ej in modelo.Ejercicios)
-            {
-                original.Ejercicios.Add(new RutinaEjercicio
+            var ejercicios = modelo.Ejercicios
+                .Select(ej => new RutinaEjercicio
                 {
                     EjercicioId = ej.EjercicioId,
                     SeriesObjetivo = ej.SeriesObjetivo,
                     RepeticionesObjetivo = ej.RepeticionesObjetivo,
                     PesoObjetivo = ej.PesoObjetivo,
                     Orden = orden++
-                });
-            }
+                })
+                .ToList();
 
-            await context.SaveChangesAsync();
+            var ok = await rutinas.ActualizarAsync(
+                id, usuarioId, modelo.Nombre.Trim(), modelo.Descripcion?.Trim(), ejercicios);
+            if (!ok) return NotFound();
 
-            return Ok(new { rutinaId = original.Id });
+            return Ok(new { rutinaId = id });
         }
 
         // ===== Eliminar GET (confirmación) =====
         public async Task<IActionResult> Eliminar(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var rutina = await context.Rutinas
-                .Include(r => r.Ejercicios)
-                .FirstOrDefaultAsync(r => r.Id == id && r.UsuarioId == usuarioId);
-
+            var rutina = await rutinas.ObtenerParaEliminarAsync(id, ObtenerUsuarioId());
             return rutina == null ? NotFound() : View(rutina);
         }
 
@@ -249,17 +177,8 @@ namespace GymTracker.Controllers
         [HttpPost, ActionName("Eliminar")]
         public async Task<IActionResult> EliminarConfirmado(int id)
         {
-            var usuarioId = ObtenerUsuarioId();
-
-            var rutina = await context.Rutinas
-                .FirstOrDefaultAsync(r => r.Id == id && r.UsuarioId == usuarioId);
-
-            if (rutina == null) return NotFound();
-
-            // Gracias a OnDelete(Cascade), borrar la rutina elimina automáticamente
-            // todos sus RutinaEjercicio. EF Core lo maneja sin que tengamos que hacer nada.
-            context.Rutinas.Remove(rutina);
-            await context.SaveChangesAsync();
+            var ok = await rutinas.EliminarAsync(id, ObtenerUsuarioId());
+            if (!ok) return NotFound();
 
             return RedirectToAction(nameof(Index));
         }

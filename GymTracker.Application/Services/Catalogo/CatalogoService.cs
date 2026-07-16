@@ -1,4 +1,5 @@
 using System.Text.Json;
+using GymTracker.Application.Abstractions;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace GymTracker.Services.Catalogo
@@ -13,7 +14,7 @@ namespace GymTracker.Services.Catalogo
     // rate limit (HTTP 429), y el número de usuarios queda desacoplado del
     // consumo de la API. Los GIFs individuales sí se sirven del CDN al vuelo
     // (URLs estables en gifUrl), pero eso no toca la API de lista.
-    public class CatalogoService(IWebHostEnvironment env, IMemoryCache cache)
+    public class CatalogoService(ISeedFileProvider seedFiles, IMemoryCache cache)
     {
         private const string ClaveCacheCatalogo = "catalogo:todos";
 
@@ -119,7 +120,7 @@ namespace GymTracker.Services.Catalogo
         // que el fallo sea visible en desarrollo (no un catálogo vacío silencioso).
         private List<EjercicioCatalogoDto> CargarDesdeArchivo()
         {
-            var ruta = Path.Combine(env.ContentRootPath, "SeedData", "exercises.json");
+            var ruta = seedFiles.GetSeedFilePath("exercises.json");
             var json = File.ReadAllText(ruta);
             return JsonSerializer.Deserialize<List<EjercicioCatalogoDto>>(json, JsonOpts)
                 ?? new List<EjercicioCatalogoDto>();

@@ -1,4 +1,4 @@
-﻿using GymTracker.Data;
+﻿using GymTracker.Application.Abstractions;
 using GymTracker.DTOs;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,7 +6,7 @@ namespace GymTracker.Services.Progreso
 {
     // Servicio que consulta y agrega datos para las gráficas de progreso.
     // Mantiene la lógica fuera de los controllers (coherente con el ADR-03).
-    public class ProgresoService(ApplicationDbContext context)
+    public class ProgresoService(IApplicationDbContext context)
     {
         // ===== Gráfica A: evolución del peso corporal =====
         // Devuelve un punto por cada medición del usuario, ordenado por fecha.

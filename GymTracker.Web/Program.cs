@@ -1,13 +1,29 @@
+using GymTracker.Application;
+using GymTracker.Application.Abstractions;
 using GymTracker.Data;
+using GymTracker.Infrastructure;
+using GymTracker.Web.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+// ===== Composición por capas (ADR-03) =====
+// Program.cs es el composition root: arma la inyección de dependencias llamando a
+// las extensiones de cada capa, sin conocer los detalles de persistencia ni de los
+// servicios de negocio.
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+// Infraestructura: ApplicationDbContext (PostgreSQL) + IApplicationDbContext.
+builder.Services.AddInfrastructure(connectionString);
+
+// Aplicación: servicios de negocio (dominio, progreso, volumen, IA, catálogo).
+builder.Services.AddApplication(builder.Configuration);
+
+// Localizador de archivos de seed (implementa la abstracción de Application con
+// el content root del host).
+builder.Services.AddScoped<ISeedFileProvider, WebSeedFileProvider>();
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -21,48 +37,6 @@ builder.Services.AddControllersWithViews()
 // API: registra el explorador de endpoints y el generador de Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-builder.Services.AddScoped<GymTracker.Services.Progreso.ProgresoService>();
-
-// ===== Servicios de IA (Coach) =====
-// Factory de volumen del ADR-05 (por si aún no estaba registrado).
-builder.Services.AddScoped<GymTracker.Services.Volumen.CalculoVolumenFactory>();
-
-// Proveedor de IA: Claude. La API key viene de configuración (User Secrets en
-// desarrollo, variable de entorno en producción), nunca del código.
-builder.Services.AddScoped<GymTracker.Services.IA.IProveedorIA>(sp =>
-{
-    var config = sp.GetRequiredService<IConfiguration>();
-
-    var claudeKey = config["Anthropic:ApiKey"]
-        ?? throw new InvalidOperationException("Falta la API key de Anthropic (Anthropic:ApiKey).");
-    var geminiKey = config["Gemini:ApiKey"]
-        ?? throw new InvalidOperationException("Falta la API key de Gemini (Gemini:ApiKey).");
-
-    // Orden de fallback: primero Claude, si falla, Gemini.
-    var proveedores = new List<GymTracker.Services.IA.IProveedorIA>
-    {
-        new GymTracker.Services.IA.ClaudeProveedor(claudeKey),
-        new GymTracker.Services.IA.GeminiProveedor(geminiKey)
-    };
-
-    var logger = sp.GetRequiredService<ILogger<GymTracker.Services.IA.ProveedorIAConFallback>>();
-    return new GymTracker.Services.IA.ProveedorIAConFallback(proveedores, logger);
-});
-
-// Orquestador del Coach.
-builder.Services.AddScoped<GymTracker.Services.IA.CoachService>();
-
-
-
-// ===== Catálogo de ejercicios (con GIFs) =====
-// El catálogo se sirve desde un seed local (SeedData/exercises.json), no desde la
-// API externa en runtime (ver ADR-06 y CatalogoService). Por eso ya no se
-// registra un HttpClient para ExerciseDB. La caché en memoria guarda el catálogo
-// cargado una sola vez desde el archivo.
-builder.Services.AddMemoryCache();
-builder.Services.AddScoped<GymTracker.Services.Catalogo.CatalogoService>();
-
 
 var app = builder.Build();
 
