@@ -1,18 +1,3 @@
-# 🏋️ GymTracker
- 
-> Bitácora personal de entrenamiento de gimnasio. Registra ejercicios, diseña
-> rutinas con metas, guarda tus sesiones reales, mide tu progreso corporal y
-> visualiza tu evolución de fuerza con el tiempo.
- 
-![.NET](https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
-![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=c-sharp&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
-![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)
-![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white)
- 
----
- 
 ## 🌿 Rama `deuda-tecnica`
  
 > Esta rama corresponde a la actividad de **Refactorización y Deuda Técnica**
@@ -33,8 +18,22 @@ Lo que se hizo en esta rama:
      diseño): la lógica de datos vive en los controllers en lugar de en una capa
      de servicios; se propone Extract Class / Extract Method / DI, en línea con el
      ADR-03.
- 
+
 ---
+# 🏋️ GymTracker
+ 
+> Bitácora personal de entrenamiento de gimnasio. Registra ejercicios, diseña
+> rutinas con metas, guarda tus sesiones reales, mide tu progreso corporal y
+> visualiza tu evolución de fuerza con el tiempo.
+ 
+![.NET](https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=c-sharp&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
+![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)
+![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white)
+ 
+--- 
  
 ## 📖 Sobre el proyecto
  
