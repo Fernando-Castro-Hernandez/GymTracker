@@ -1,10 +1,12 @@
-﻿using GymTracker.Models;
+﻿using GymTracker.Application.Abstractions;
+using GymTracker.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace GymTracker.Data
 {
-    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext(options)
+    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : IdentityDbContext(options), IApplicationDbContext
     {
         public DbSet<Ejercicio> Ejercicios { get; set; }
         public DbSet<Rutina> Rutinas { get; set; }
