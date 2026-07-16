@@ -34,10 +34,14 @@ Autor: Fernando Castro Hernández.
    entre sesiones; si la app da error de conexión, es que el contenedor está
    apagado). El contenedor se publica en el puerto **5433** del host (no 5432),
    para no chocar con un PostgreSQL nativo de Windows que suele ocupar el 5432.
-2. Aplicar migraciones si hace falta: `dotnet ef database update`.
+2. Aplicar migraciones si hace falta. Como ahora hay 4 proyectos (ADR-03), el
+   `DbContext` vive en `GymTracker.Infrastructure` y el arranque en
+   `GymTracker.Web`, así que los comandos `dotnet ef` requieren los flags:
+   `dotnet ef database update --project GymTracker.Infrastructure --startup-project GymTracker.Web`.
    IMPORTANTE: detener la app antes de correr comandos `dotnet ef` o `dotnet
    build`, porque IIS Express bloquea el .dll mientras la app está en ejecución.
-3. Correr: `dotnet run` o F5 en Visual Studio.
+3. Correr: `dotnet run --project GymTracker.Web` o F5 en Visual Studio. El
+   `dotnet build` se hace sobre la solución (`GymTracker.slnx`).
 4. App en `https://localhost:44353`, Swagger en `https://localhost:44353/swagger`.
 
 Credenciales de la base de datos: usuario `gymtracker_user`, base `gymtracker`.
@@ -48,32 +52,50 @@ contraseña por el socket local):
 
 ## Estructura del proyecto
 
+Desde la implementación del **ADR-03** (rama `arquitectura-capas`), la solución
+está organizada en **4 proyectos separados** (`GymTracker.slnx` en la raíz), con
+dependencias `Web → Application → Domain` e `Infrastructure` proveyendo la
+persistencia. IMPORTANTE: los namespaces se **conservaron** (`GymTracker.Models`,
+`GymTracker.Data`, `GymTracker.Services`, `GymTracker.DTOs`) aunque los archivos
+vivan en proyectos distintos, para no alterar el snapshot de EF Core.
+
 ```
-GymTracker/
-├── Controllers/          # MVC: Home, Ejercicios, Rutinas, Sesiones, Mediciones, Progreso
-│   └── Api/              # API REST: EjerciciosApi, RutinasApi, ProgresoApi
-├── Models/              # Entidades: Ejercicio, Rutina, RutinaEjercicio,
-│   │                    #   Sesion, SerieRealizada, Medicion
-│   ├── Enums/           # GrupoMuscular
-│   └── ViewModels/      # CrearRutinaViewModel, EditarRutinaViewModel,
-│                        #   EjercicioEnRutinaViewModel, RegistrarSesionViewModel,
-│                        #   SerieEditableViewModel
-├── DTOs/                # Respuestas de la API (JSON limpio): EjercicioDto, RutinaDto,
-│                        #   RutinaEjercicioDto, VolumenDto, PuntoProgresoDto, SerieProgresoDto
-├── Services/
-│   ├── Volumen/         # Patrones GOF: Strategy (ICalculoVolumen + 3 estrategias)
-│   │                    #   y Factory Method (CalculoVolumenFactory) — ADR-05
-│   ├── Progreso/        # ProgresoService: agregación de datos para las gráficas
-│   └── IA/              # Coach IA: IProveedorIA, ClaudeProveedor, GeminiProveedor,
-│                        #   ProveedorIAConFallback, CoachService
-├── SeedData/            # exercises.json: seed local del catálogo (1324 ejercicios)
-├── Data/                # ApplicationDbContext (EF Core)
-├── Migrations/          # Migraciones de EF Core
-├── Views/               # Vistas Razor (Ejercicios/, Rutinas/, Sesiones/,
-│                        #   Mediciones/, Progreso/, Home/, Shared/)
-├── Areas/Identity/      # Páginas de login/registro (scaffolded)
-├── docs/                # ADRs y documentación (incluye PLAN-integraciones-IA.md)
-└── wwwroot/             # Estáticos: css/, js/, lib/ (Bootstrap 5, Chart.js)
+GymTracker/  (raíz del repo)
+├── GymTracker.slnx                 # Solución con los 4 proyectos
+│
+├── GymTracker.Domain/              # Núcleo, sin dependencias
+│   └── Models/                     #   Entidades (Ejercicio, Rutina, RutinaEjercicio,
+│       └── Enums/                  #   Sesion, SerieRealizada, Medicion) + GrupoMuscular
+│
+├── GymTracker.Application/         # Lógica de negocio. → Domain
+│   ├── Abstractions/               #   IApplicationDbContext, ISeedFileProvider
+│   ├── DTOs/                       #   Respuestas de la API (EjercicioDto, RutinaDto, ...)
+│   ├── DependencyInjection.cs      #   AddApplication(config): registra los servicios
+│   └── Services/
+│       ├── Ejercicios/ Rutinas/    #   Servicios de dominio: I{X}Service + {X}Service
+│       │   Sesiones/ Mediciones/   #   (consultas, guardado, filtro de ownership)
+│       ├── Volumen/                #   Strategy + Factory Method (ADR-05)
+│       ├── Progreso/               #   ProgresoService (datos de las gráficas)
+│       ├── IA/                     #   Coach IA (IProveedorIA, Claude/Gemini, fallback)
+│       └── Catalogo/               #   CatalogoService (seed local con GIFs)
+│
+├── GymTracker.Infrastructure/      # Persistencia. → Domain, Application
+│   ├── Data/                       #   ApplicationDbContext (implementa IApplicationDbContext)
+│   ├── Migrations/                 #   Migraciones de EF Core
+│   └── DependencyInjection.cs      #   AddInfrastructure(cs): DbContext + Npgsql
+│
+└── GymTracker.Web/                 # Presentación (composition root). → Application, Infrastructure
+    ├── Controllers/                #   MVC: Home, Ejercicios, Rutinas, Sesiones, Mediciones, Progreso
+    │   └── Api/                    #   API REST: EjerciciosApi, RutinasApi, ProgresoApi, CoachApi
+    ├── ViewModels/                 #   Modelos de presentación (CrearRutinaViewModel, ...)
+    ├── Views/                      #   Vistas Razor
+    ├── Areas/Identity/             #   Login/registro (scaffolded)
+    ├── Services/                   #   WebSeedFileProvider (implementa ISeedFileProvider)
+    ├── SeedData/                   #   exercises.json (seed del catálogo, en el content root)
+    ├── wwwroot/                    #   Estáticos: css/, js/, lib/ (Bootstrap 5, Chart.js)
+    └── Program.cs                  #   AddInfrastructure(...) + AddApplication(...)
+
+docs/                               # ADRs y documentación (en la raíz del repo)
 ```
 
 ## Funcionalidades implementadas
@@ -98,15 +120,19 @@ El proyecto documenta sus decisiones en `docs/ADR/`. Resumen:
 
 - **ADR-01** — Patrón MVC con ASP.NET Core como arquitectura base.
 - **ADR-02** — Vistas arquitectónicas y trade-offs.
-- **ADR-03** — Decisión (propuesta, aún no implementada) de migrar a una
-  arquitectura en capas con proyectos separados. **El código actual sigue siendo
-  un monolito de un solo proyecto**; los controllers acceden al
-  `ApplicationDbContext` directamente. El ADR sí prevé añadir servicios, patrón
-  ya usado por `Services/Volumen/` y `Services/Progreso/`.
+- **ADR-03** — Arquitectura en capas con proyectos separados. **IMPLEMENTADO**
+  (rama `arquitectura-capas`): la solución tiene 4 proyectos (Domain, Application,
+  Infrastructure, Web) y **los controllers ya NO acceden al `ApplicationDbContext`
+  directamente**: la lógica de datos vive en servicios de la capa Application,
+  inyectados por DI y dependientes de `IApplicationDbContext`. Ver la estructura
+  arriba y la sección "Implementación" del ADR-03.
 - **ADR-04** — Incorporación de la API REST.
 - **ADR-05** — Patrones de diseño GOF: Strategy + Factory Method para el cálculo
   de volumen de entrenamiento (sobre las metas de la rutina). La gráfica de
   volumen real reutiliza el mismo concepto de tonelaje sobre series ejecutadas.
+- **ADR-06** — Registro de deuda técnica. Deuda #1 (credenciales en el historial,
+  mitigada) y Deuda #2 (acceso directo al `DbContext` desde los controllers,
+  **pagada** con el ADR-03).
 
 ### Integraciones de IA (Coach)
 
@@ -177,8 +203,10 @@ Ningún secreto se versiona. Reglas:
 - `wwwroot/js/site.js`.
 
 ### Lo que NO se debe tocar sin confirmación explícita
-- **Controllers, Models, Data, Migrations, DTOs y Services**: contienen la lógica
-  y el acceso a datos. No modificar al hacer cambios de diseño.
+- **Los proyectos de capa `GymTracker.Domain`, `GymTracker.Application` e
+  `GymTracker.Infrastructure`** (entidades, servicios, DTOs, `ApplicationDbContext`,
+  migraciones), y **los Controllers** de `GymTracker.Web`: contienen la lógica y el
+  acceso a datos. No modificar al hacer cambios de diseño visual.
 - Dentro de las vistas, **no eliminar ni alterar**:
   - Las directivas `@model`, `@foreach`, `@if`, `@section`.
   - Los atributos `asp-for`, `asp-action`, `asp-controller`, `asp-route-*`,
@@ -194,11 +222,14 @@ Ningún secreto se versiona. Reglas:
   - `Views/Progreso/Index.cshtml` (fetch a `/api/progreso/*` y Chart.js). No
     cambiar los `id` de los `<canvas>` ni las URLs de la API.
   Se puede cambiar el CSS y el HTML alrededor, pero la lógica JS debe seguir igual.
-- La configuración de la API, Identity y Swagger en `Program.cs`, y el registro
-  de servicios (`AddScoped`).
+- La configuración de la API, Identity y Swagger en `GymTracker.Web/Program.cs`, y
+  el registro de servicios en los métodos `AddApplication(...)`
+  (`GymTracker.Application/DependencyInjection.cs`) y `AddInfrastructure(...)`
+  (`GymTracker.Infrastructure/DependencyInjection.cs`).
 
 ### Al terminar cualquier cambio
-- Confirmar que el proyecto **compila** (`dotnet build`, con la app detenida).
+- Confirmar que la solución **compila** (`dotnet build GymTracker.slnx`, con la app
+  detenida).
 - Verificar que ningún comportamiento cambió: login, CRUD de ejercicios, rutinas,
   mediciones; iniciar y registrar una sesión; la asignación dinámica de
   ejercicios; las tres gráficas de progreso; y que la API + Swagger respondan.

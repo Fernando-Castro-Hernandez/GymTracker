@@ -102,6 +102,18 @@ controllers (solo `Services/Volumen/`, `Services/Progreso/`, `Services/IA/` y
 - El comportamiento observable debe permanecer idéntico: es refactorización, no
   reescritura, y se hace en pasos pequeños con un commit antes y otro después.
 
+### Estado: PAGADA (15/07/2026)
+
+Esta deuda se **pagó** implementando la arquitectura en capas del **ADR-03** (rama
+`arquitectura-capas`). La lógica de acceso a datos se extrajo de los controllers a
+servicios de la capa `GymTracker.Application` (`EjercicioService`, `RutinaService`,
+`SesionService`, `MedicionService`, más los ya existentes), inyectados por DI. Los
+servicios dependen de la abstracción `IApplicationDbContext`, no del `DbContext`
+concreto. Se verificó que **ningún controller** accede ya a `ApplicationDbContext`
+y que el comportamiento observable es idéntico (la base de datos no se vio
+afectada; EF no detecta cambios de modelo). Ver la sección "Implementación" del
+ADR-03.
+
 ---
 
 ## Consecuencias
@@ -110,8 +122,8 @@ controllers (solo `Services/Volumen/`, `Services/Progreso/`, `Services/IA/` y
   silencioso; se pueden priorizar y pagar de forma consciente.
 - **La Deuda 1** está mitigada (secreto externalizado y rotado) y su pago completo
   queda condicionado a que el repositorio se haga público.
-- **La Deuda 2** se pagará de forma incremental conforme se avance en la
-  arquitectura en capas del ADR-03, sin bloquear el desarrollo actual.
+- **La Deuda 2** se **pagó** con la migración a la arquitectura en capas del
+  ADR-03 (rama `arquitectura-capas`): los controllers ya no acceden al `DbContext`.
 
 ## Relación con decisiones anteriores
 

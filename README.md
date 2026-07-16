@@ -1,25 +1,31 @@
-## 🌿 Rama `deuda-tecnica`
- 
-> Esta rama corresponde a la actividad de **Refactorización y Deuda Técnica**
-> (Unidad III). No cambia el comportamiento del sistema: **documenta deuda técnica
-> ya existente** en el proyecto para hacerla visible y poder pagarla de forma
-> consciente.
- 
+## 🌿 Rama `arquitectura-capas`
+
+> Esta rama **implementa el ADR-03**: migra el proyecto de un monolito de un solo
+> proyecto a una **arquitectura en capas con 4 proyectos separados**. No cambia el
+> comportamiento del sistema (es refactorización); **paga la Deuda Técnica #2** del
+> ADR-06 (los controllers ya no acceden directamente al `DbContext`).
+
 Lo que se hizo en esta rama:
- 
-- Se creó el **ADR-06** (`docs/ADR/ADR-06-Fernando-Castro.md`) registrando **2
-  deudas técnicas**, cada una con qué es, por qué existe, costo de no pagarla y
-  propuesta de solución:
-  1. **Credenciales en el historial de git** (deuda de infraestructura/config): la
-     contraseña de PostgreSQL de desarrollo quedó en commits antiguos; ya se
-     externalizó a User Secrets/`.env` y se rotó, pero el valor viejo sigue en el
-     historial.
-  2. **Acceso directo a `ApplicationDbContext` desde los controllers** (deuda de
-     diseño): la lógica de datos vive en los controllers en lugar de en una capa
-     de servicios; se propone Extract Class / Extract Method / DI, en línea con el
-     ADR-03.
+
+- La solución (`GymTracker.slnx`) quedó organizada en **4 proyectos**, con
+  dependencias `Web → Application → Domain` e `Infrastructure` proveyendo la
+  persistencia:
+  - **GymTracker.Domain** — entidades y enums (núcleo, sin dependencias).
+  - **GymTracker.Application** — servicios de negocio (incluidos los nuevos
+    `EjercicioService`, `RutinaService`, `SesionService`, `MedicionService`), DTOs
+    e interfaces (`IApplicationDbContext`).
+  - **GymTracker.Infrastructure** — `ApplicationDbContext`, migraciones e Identity.
+  - **GymTracker.Web** — MVC, API REST + Swagger e Identity UI; es el composition
+    root (`Program.cs` llama a `AddInfrastructure` + `AddApplication`).
+- Los **controllers se adelgazaron**: toda la lógica de acceso a datos se movió a
+  servicios inyectados por DI. **Ningún controller usa ya `ApplicationDbContext`.**
+- Los namespaces se conservaron para no alterar el snapshot de EF Core: la base de
+  datos y las migraciones no se vieron afectadas.
+- Se actualizaron el **ADR-03** (a *Implementado*) y el **ADR-06** (Deuda #2 como
+  *pagada*).
 
 ---
+
 # 🏋️ GymTracker
  
 > Bitácora personal de entrenamiento de gimnasio. Registra ejercicios, diseña
@@ -135,18 +141,20 @@ docker compose up -d
  
 # 3. Dar a la app la connection string COMPLETA (con la misma contraseña del .env)
 #    vía User Secrets. Sobrescribe la de appsettings.json (que va sin contraseña).
+#    Los User Secrets viven en el proyecto Web (--project GymTracker.Web).
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
-  "Host=localhost;Port=5433;Database=gymtracker;Username=gymtracker_user;Password=TU_CONTRASENA"
+  "Host=localhost;Port=5433;Database=gymtracker;Username=gymtracker_user;Password=TU_CONTRASENA" \
+  --project GymTracker.Web
  
 # 4. (Opcional, solo si usas el Coach IA) Configurar las API keys de los LLMs
-dotnet user-secrets set "Anthropic:ApiKey" "TU_API_KEY_DE_ANTHROPIC"
-dotnet user-secrets set "Gemini:ApiKey" "TU_API_KEY_DE_GEMINI"
+dotnet user-secrets set "Anthropic:ApiKey" "TU_API_KEY_DE_ANTHROPIC" --project GymTracker.Web
+dotnet user-secrets set "Gemini:ApiKey" "TU_API_KEY_DE_GEMINI" --project GymTracker.Web
  
-# 5. Aplicar las migraciones
-dotnet ef database update
+# 5. Aplicar las migraciones (el DbContext vive en Infrastructure; el arranque en Web)
+dotnet ef database update --project GymTracker.Infrastructure --startup-project GymTracker.Web
  
 # 6. Ejecutar la aplicación
-dotnet run
+dotnet run --project GymTracker.Web
 ```
  
 La aplicación queda disponible en `https://localhost:44353` y la documentación

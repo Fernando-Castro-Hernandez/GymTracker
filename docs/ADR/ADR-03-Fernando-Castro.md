@@ -3,8 +3,8 @@
 | Campo  | Valor |
 |--------|-------|
 | Autor  | Fernando Castro Hernández |
-| Fecha  | 10/06/2026 |
-| Estado | Propuesto |
+| Fecha  | 10/06/2026 (implementado el 15/07/2026) |
+| Estado | Aceptado — Implementado |
 
 ---
 
@@ -181,3 +181,35 @@ verificable.
 ## Diagrama de Arquitectura de Capas que se podría implementar (_PROPUESTO_)
 
 ![Diagrama de Arquitectura De Capas GymTracker](DiagramaArqCapas.png)
+
+---
+
+## Implementación (15/07/2026)
+
+Esta decisión, prevista para ejecutarse "al cerrar el MVP funcional", se
+**implementó** una vez completado el MVP (Catálogo, Rutinas, Sesiones, Mediciones,
+Progreso y Coach IA), en la rama `arquitectura-capas`. La solución quedó
+organizada en los cuatro proyectos previstos:
+
+- **GymTracker.Domain** — entidades (`Ejercicio`, `Rutina`, `RutinaEjercicio`,
+  `Sesion`, `SerieRealizada`, `Medicion`) y enums. Sin dependencias.
+- **GymTracker.Application** — servicios de negocio (`EjercicioService`,
+  `RutinaService`, `SesionService`, `MedicionService`, más Progreso, Volumen, IA
+  y Catálogo), DTOs e interfaces. La abstracción `IApplicationDbContext` permite
+  que los servicios accedan a datos sin depender de Infrastructure.
+- **GymTracker.Infrastructure** — `ApplicationDbContext`, migraciones, Identity y
+  PostgreSQL. Implementa `IApplicationDbContext`.
+- **GymTracker.Web** — MVC (controllers + vistas), API REST + Swagger e Identity
+  UI. Es el composition root: `Program.cs` llama a `AddInfrastructure(...)` y
+  `AddApplication(...)`.
+
+Referencias: `Web → Application → Domain`, con `Infrastructure` proveyendo la
+persistencia. La dirección la impone el compilador, como buscaba esta decisión.
+
+**Notas de ejecución.** Se hizo por fases verificables (crear solución + repartir
+archivos, luego cada capa) con un commit por fase. Los namespaces originales
+(`GymTracker.Models`, `GymTracker.Data`, etc.) se conservaron a propósito para no
+alterar el *snapshot* de EF Core: se verificó que EF no detecta cambios de modelo,
+por lo que la base de datos no se vio afectada. Con esta implementación se paga la
+**Deuda Técnica #2** documentada en el **ADR-06** (los controllers ya no acceden
+directamente al `DbContext`).
