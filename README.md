@@ -13,6 +13,29 @@
  
 ---
  
+## 🌿 Rama `deuda-tecnica`
+ 
+> Esta rama corresponde a la actividad de **Refactorización y Deuda Técnica**
+> (Unidad III). No cambia el comportamiento del sistema: **documenta deuda técnica
+> ya existente** en el proyecto para hacerla visible y poder pagarla de forma
+> consciente.
+ 
+Lo que se hizo en esta rama:
+ 
+- Se creó el **ADR-06** (`docs/ADR/ADR-06-Fernando-Castro.md`) registrando **2
+  deudas técnicas**, cada una con qué es, por qué existe, costo de no pagarla y
+  propuesta de solución:
+  1. **Credenciales en el historial de git** (deuda de infraestructura/config): la
+     contraseña de PostgreSQL de desarrollo quedó en commits antiguos; ya se
+     externalizó a User Secrets/`.env` y se rotó, pero el valor viejo sigue en el
+     historial.
+  2. **Acceso directo a `ApplicationDbContext` desde los controllers** (deuda de
+     diseño): la lógica de datos vive en los controllers en lugar de en una capa
+     de servicios; se propone Extract Class / Extract Method / DI, en línea con el
+     ADR-03.
+ 
+---
+ 
 ## 📖 Sobre el proyecto
  
 **GymTracker** es una aplicación web construida como proyecto académico para la
