@@ -76,7 +76,9 @@ GymTracker/  (raíz del repo)
 │       │   Sesiones/ Mediciones/   #   (consultas, guardado, filtro de ownership)
 │       ├── Volumen/                #   Strategy + Factory Method (ADR-05)
 │       ├── Progreso/               #   ProgresoService (datos de las gráficas)
-│       ├── IA/                     #   Coach IA (IProveedorIA, Claude/Gemini, fallback)
+│       ├── IA/                     #   Coach IA + Chatbot (IProveedorIA, Claude/Gemini,
+│       │                           #   fallback; ChatService, ContextoChatBuilder,
+│       │                           #   GuardarrielChat, RouterContexto — ADR-07)
 │       └── Catalogo/               #   CatalogoService (seed local con GIFs)
 │
 ├── GymTracker.Infrastructure/      # Persistencia. → Domain, Application
@@ -86,7 +88,7 @@ GymTracker/  (raíz del repo)
 │
 └── GymTracker.Web/                 # Presentación (composition root). → Application, Infrastructure
     ├── Controllers/                #   MVC: Home, Ejercicios, Rutinas, Sesiones, Mediciones, Progreso
-    │   └── Api/                    #   API REST: EjerciciosApi, RutinasApi, ProgresoApi, CoachApi
+    │   └── Api/                    #   API REST: EjerciciosApi, RutinasApi, ProgresoApi, CoachApi, ChatApi
     ├── ViewModels/                 #   Modelos de presentación (CrearRutinaViewModel, ...)
     ├── Views/                      #   Vistas Razor
     ├── Areas/Identity/             #   Login/registro (scaffolded)
@@ -113,6 +115,10 @@ docs/                               # ADRs y documentación (en la raíz del rep
   opcionales. No se guarda IMC (es un valor derivado; se calcularía al vuelo).
 - **Progreso**: tres gráficas Chart.js (peso corporal, volumen por sesión y
   progresión de carga por ejercicio) alimentadas por endpoints de API vía fetch.
+- **Chatbot con contexto** (Coach conversacional, ADR-07): widget flotante que
+  responde sobre los datos reales del usuario (rutinas, sesiones, volumen,
+  mediciones). Pipeline de LLM con contexto podado (sin RAG), guardarrieles,
+  router de contexto, prompt caching y observabilidad. Historial en `ChatMensajes`.
 
 ## Arquitectura y decisiones (ADR)
 
@@ -133,13 +139,20 @@ El proyecto documenta sus decisiones en `docs/ADR/`. Resumen:
 - **ADR-06** — Registro de deuda técnica. Deuda #1 (credenciales en el historial,
   mitigada) y Deuda #2 (acceso directo al `DbContext` desde los controllers,
   **pagada** con el ADR-03).
+- **ADR-07** — Arquitectura del Chatbot con contexto (pipeline de LLM).
+  **IMPLEMENTADO** (rama `chatbot-ia`): construcción de contexto SIN RAG (retrieval
+  SQL + poda por ventana de tiempo), guardarrieles en capas (system prompt como
+  defensa real), router de *contexto* (no de modelo), prompt caching de Anthropic y
+  observabilidad de tokens/latencia. Descarta a conciencia RAG semántico y
+  capacidades agénticas.
 
-### Integraciones de IA (Coach)
+### Integraciones de IA (Coach y Chatbot)
 
 El **Coach IA está implementado** en `Services/IA/`. Analiza una rutina (balance
 muscular y volumen) usando un LLM y devuelve recomendaciones. Diseño:
 
-- `IProveedorIA` — interfaz común para los proveedores de LLM.
+- `IProveedorIA` — interfaz común para los proveedores de LLM (métodos
+  `AnalizarRutinaAsync` para el Coach y `ChatearAsync` para el Chatbot).
 - `ClaudeProveedor` — proveedor principal, Claude Haiku vía el SDK oficial de
   Anthropic. Usa "prompted JSON" con parseo defensivo.
 - `GeminiProveedor` — proveedor de fallback, Gemini Flash vía `Google.GenAI`.
@@ -148,13 +161,22 @@ muscular y volumen) usando un LLM y devuelve recomendaciones. Diseño:
 - `CoachService` — orquestador que prepara los datos de la rutina y llama al
   proveedor.
 
+El **Chatbot con contexto está implementado** (Integración 4, **ADR-07**): un
+widget flotante (`_ChatWidget.cshtml` + `chat.js`, solo para autenticados) que
+responde sobre los datos reales del usuario. Reutiliza el gateway `IProveedorIA`
+con fallback. Piezas en `Services/IA/`: `ChatService` (orquesta el pipeline y
+persiste en `ChatMensajes`), `ContextoChatBuilder` (contexto podado, sin RAG),
+`GuardarrielChat` (validación de entrada), `RouterContexto` (heurística de contexto).
+Expuesto en `ChatApiController` (`/api/chat/*`, con rate limiting por usuario).
+
 Las **API keys nunca van en el código ni en `appsettings.json`**: se leen de
 configuración (`Anthropic:ApiKey`, `Gemini:ApiKey`) en `Program.cs`, con User
 Secrets en desarrollo y variables de entorno en producción.
 
 El **catálogo enriquecido con GIFs ya está implementado** vía un seed local
 (`SeedData/exercises.json`, 1324 ejercicios), sin llamar a APIs de terceros en
-runtime. El resto de la hoja de ruta (generador de rutinas con IA, etc.) sigue
+runtime. El **Chatbot con contexto (Integración 4) también está implementado**
+(ADR-07). El resto de la hoja de ruta (generador de rutinas con IA, etc.) sigue
 como propuesta en `docs/PLAN-integraciones-IA.md` y no debe implementarse sin
 planeación explícita.
 

@@ -158,11 +158,21 @@ estables (parte del plan original).
 
 ---
 
-### Integración 4 — Chatbot con contexto de entrenamiento
+### Integración 4 — Chatbot con contexto de entrenamiento  ✅ IMPLEMENTADO (18/07/2026)
 
-**Qué hace.** Un chat donde el usuario pregunta "¿qué entrené más esta semana?",
-"¿cómo mejoro mi rutina de pierna?", y el modelo responde **con acceso a sus
-rutinas, ejercicios y (cuando exista) sus sesiones**.
+> **Estado: IMPLEMENTADO** en la rama `chatbot-ia`, documentado en el
+> **[ADR-07](ADR/ADR-07-Fernando-Castro.md)**. Se construyó como un **pipeline de
+> LLM** (marco de *AI Engineering* de Chip Huyen): construcción de contexto SIN RAG
+> (retrieval SQL + poda por ventana de tiempo), guardarrieles en capas (el system
+> prompt como defensa real), router de *contexto* (no de modelo), prompt caching
+> nativo de Anthropic y observabilidad de tokens/latencia. El estado conversacional
+> se persiste en la tabla `ChatMensajes` y se reenvía podado en cada llamada. Se
+> descartaron a conciencia RAG semántico y capacidades agénticas (sobreingeniería
+> para un sistema mono-usuario). Ver el ADR-07 para las decisiones y alternativas.
+
+**Qué hace.** Un widget de chat flotante donde el usuario pregunta "¿qué entrené
+más esta semana?", "¿cómo mejoro mi rutina de pierna?", y el modelo responde **con
+acceso a sus rutinas, ejercicios, sesiones y mediciones reales**.
 
 **Por qué destaca.** Es el formato del proyecto del compañero (Gemini chatbot),
 pero diferenciado por responder sobre datos reales del usuario.
@@ -182,7 +192,7 @@ datos ricos de los que hablar. Antes de eso aportaría poco.
 2. **Fase 1 — Coach IA** (Integración 1): la más diferenciadora y autocontenida.
 3. **Fase 2 — Catálogo con GIFs** (Integración 2): impacto visual, sin costo.
 4. **Fase 3 — Generador de rutinas** (Integración 3): salida estructurada.
-5. **Fase 4 — Chatbot** (Integración 4): cuando ya haya datos de sesiones.
+5. **Fase 4 — Chatbot** (Integración 4): ✅ **implementado** (ADR-07).
 
 Cada fase es un avance independiente, con su rama y (si cambia una decisión
 arquitectónica) su ADR.

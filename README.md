@@ -52,8 +52,9 @@ de lo que se levanta, sesión tras sesión. GymTracker es esa bitácora.
 Cubre el **ciclo completo** del seguimiento de entrenamiento: desde la biblioteca
 de ejercicios y el diseño de rutinas con metas, hasta el registro de lo que
 *realmente* se hizo en el gimnasio, las mediciones corporales y las gráficas de
-progreso. Incluye además un **Coach IA** que analiza tus rutinas y un **catálogo
-de +1300 ejercicios con animaciones (GIFs)**.
+progreso. Incluye además un **Coach IA** que analiza tus rutinas, un **chatbot
+con contexto** que responde sobre tus datos reales y un **catálogo de +1300
+ejercicios con animaciones (GIFs)**.
 
 <p align="right">(<a href="#readme-top">volver arriba</a>)</p>
 
@@ -70,6 +71,7 @@ de +1300 ejercicios con animaciones (GIFs)**.
 | **Progreso** | Tres gráficas Chart.js: evolución de peso corporal, volumen por sesión y progresión de carga por ejercicio. |
 | **Catálogo con GIFs** | +1300 ejercicios con animaciones, servidos desde un *seed* local (sin llamar a APIs externas en runtime). Se vinculan a tus ejercicios propios para ver la técnica al entrenar. |
 | **Coach IA** | Analiza una rutina (balance muscular y volumen) con un LLM y devuelve recomendaciones. Usa Claude Haiku con *fallback* a Gemini. |
+| **Chatbot con contexto** | Asistente conversacional (widget flotante) que responde sobre tus datos reales —rutinas, sesiones, volumen y mediciones—. Pipeline de LLM con contexto podado (sin RAG), guardarrieles, *prompt caching* y observabilidad (ADR-07). |
 | **API REST + Swagger** | Endpoints JSON para el catálogo y los datos de las gráficas, documentados con Swagger/OpenAPI. |
 | **Autenticación** | Registro e inicio de sesión con ASP.NET Core Identity; cada usuario solo ve y edita sus propios datos. |
 
@@ -148,7 +150,7 @@ flowchart LR
 | ORM | Entity Framework Core 10 | Acceso a datos y migraciones |
 | Base de datos | PostgreSQL 16 (en Docker) | Persistencia |
 | Autenticación | ASP.NET Core Identity | Usuarios y sesiones (cookies) |
-| IA | Claude Haiku + Gemini (fallback) | Coach: análisis de rutinas |
+| IA | Claude Haiku + Gemini (fallback) | Coach (análisis de rutinas) y Chatbot con contexto |
 | Frontend | Bootstrap 5 + Chart.js | Estilos y visualización de datos |
 
 <p align="right">(<a href="#readme-top">volver arriba</a>)</p>
@@ -188,6 +190,12 @@ como **ADR** (Architecture Decision Records) en [`docs/ADR/`](./docs/ADR).
   congelan al iniciar el entrenamiento, garantizando un historial inmutable.
 - **Coach IA con *fallback*:** interfaz común `IProveedorIA` con Claude como
   proveedor principal y Gemini como respaldo, orquestados por `ProveedorIAConFallback`.
+- **Chatbot con contexto (ADR-07):** pipeline de LLM (marco de *AI Engineering* de
+  Chip Huyen) que reutiliza el mismo gateway `IProveedorIA`. Construye contexto con
+  **retrieval SQL + poda** (sin RAG), aplica **guardarrieles en capas** (el system
+  prompt como defensa real), un **router de contexto**, **prompt caching** nativo y
+  **observabilidad** de tokens/latencia. El estado conversacional se persiste en
+  `ChatMensajes` (manejo de estado sobre una API *stateless*).
 - **Catálogo con *seed* local (ADR-06):** el catálogo de +1300 ejercicios se lee
   de un JSON local cacheado en memoria; **no** se llama a la API externa en runtime
   (patrón cache-aside, para evitar rate limits y desacoplar el nº de usuarios).
@@ -260,6 +268,7 @@ la API (Swagger) en `https://localhost:44353/swagger`.
 - Arquitectura en capas (4 proyectos)
 - Catálogo de +1300 ejercicios con GIFs (seed local)
 - Coach IA (análisis de rutinas con Claude + fallback a Gemini)
+- Chatbot con contexto de entrenamiento (pipeline de LLM, ADR-07)
 
 **Pendiente**
 
