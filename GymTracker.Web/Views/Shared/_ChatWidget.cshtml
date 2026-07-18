@@ -1,0 +1,36 @@
+@*
+    Widget flotante del Chatbot con contexto (Integración 4).
+    Se renderiza desde _Layout SOLO para usuarios autenticados. Toda la lógica
+    (fetch al API, render, spinner, errores) vive en wwwroot/js/chat.js; aquí
+    solo está el markup y el estilo se aplica desde site.css.
+*@
+<div id="gt-chat" class="gt-chat">
+    <button id="gt-chat-toggle" class="gt-chat-toggle" type="button"
+            aria-label="Abrir asistente de entrenamiento">
+        <span class="gt-chat-toggle-open">💬</span>
+        <span class="gt-chat-toggle-close">✕</span>
+    </button>
+
+    <div id="gt-chat-panel" class="gt-chat-panel" hidden>
+        <div class="gt-chat-header">
+            <div class="gt-chat-title">
+                <span class="gt-chat-dot"></span>
+                <span>Asistente <strong>GymTracker</strong></span>
+            </div>
+            <button id="gt-chat-clear" class="gt-chat-iconbtn" type="button"
+                    title="Limpiar conversación" aria-label="Limpiar conversación">🗑</button>
+        </div>
+
+        <div id="gt-chat-messages" class="gt-chat-messages" aria-live="polite"></div>
+
+        <form id="gt-chat-form" class="gt-chat-form" autocomplete="off">
+            <textarea id="gt-chat-input" class="gt-chat-input" rows="1"
+                      maxlength="1000" placeholder="Pregunta sobre tus rutinas, sesiones o progreso…"
+                      aria-label="Escribe tu mensaje"></textarea>
+            <button id="gt-chat-send" class="gt-chat-send" type="submit"
+                    aria-label="Enviar mensaje">➤</button>
+        </form>
+    </div>
+</div>
+
+<script src="~/js/chat.js" asp-append-version="true"></script>

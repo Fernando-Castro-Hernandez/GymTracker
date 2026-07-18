@@ -4,6 +4,8 @@ using GymTracker.Data;
 using GymTracker.Infrastructure;
 using GymTracker.Web.Services;
 using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +40,38 @@ builder.Services.AddControllersWithViews()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// ===== Rate limiting del chatbot (ADR-07, guardarriel determinista) =====
+// Política "chat": ventana fija de 10 peticiones por minuto, particionada por
+// usuario. Acota bucles/abuso y el costo de las llamadas a la IA sin afectar al
+// resto de la app (solo la aplica [EnableRateLimiting("chat")] en ChatApiController).
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("chat", httpContext =>
+    {
+        var clave = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                    ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                    ?? "anon";
+
+        return RateLimitPartition.GetFixedWindowLimiter(clave, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
+
+    // Respuesta amable cuando se supera el límite (en vez de un 429 vacío).
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            "{\"error\":\"Vas muy rápido. Espera un momento antes de enviar otro mensaje.\"}",
+            token);
+    };
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -59,6 +93,10 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseAuthorization();
+
+// Rate limiter después de la autorización: la partición "chat" usa la identidad
+// del usuario ya resuelta.
+app.UseRateLimiter();
 
 app.MapStaticAssets();
 

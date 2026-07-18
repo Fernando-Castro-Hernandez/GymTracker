@@ -74,6 +74,13 @@
             &copy; 2026 - GymTracker - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacidad</a>
         </div>
     </footer>
+
+    @* Chatbot con contexto (Integración 4): solo para usuarios autenticados. *@
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <partial name="_ChatWidget" />
+    }
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
