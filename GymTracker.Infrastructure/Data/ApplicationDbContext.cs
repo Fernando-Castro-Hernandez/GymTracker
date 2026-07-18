@@ -14,6 +14,7 @@ namespace GymTracker.Data
         public DbSet<Sesion> Sesiones { get; set; }
         public DbSet<SerieRealizada> SeriesRealizadas { get; set; }
         public DbSet<Medicion> Mediciones { get; set; }
+        public DbSet<ChatMensaje> ChatMensajes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -80,6 +81,13 @@ namespace GymTracker.Data
             builder.Entity<Medicion>().Property(m => m.Pecho).HasPrecision(6, 2);
             builder.Entity<Medicion>().Property(m => m.Brazo).HasPrecision(6, 2);
             builder.Entity<Medicion>().Property(m => m.Muslo).HasPrecision(6, 2);
+
+            // ===== Índice del historial de chat (Integración 4) =====
+            // El chatbot siempre consulta los mensajes de UN usuario ordenados
+            // por fecha (cargar el hilo, podar el historial). El índice compuesto
+            // por (UsuarioId, FechaUtc) hace esas consultas eficientes.
+            builder.Entity<ChatMensaje>()
+                .HasIndex(c => new { c.UsuarioId, c.FechaUtc });
         }
     }
 }

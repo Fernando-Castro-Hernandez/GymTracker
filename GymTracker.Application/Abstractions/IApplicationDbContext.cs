@@ -21,6 +21,7 @@ namespace GymTracker.Application.Abstractions
         DbSet<Sesion> Sesiones { get; }
         DbSet<SerieRealizada> SeriesRealizadas { get; }
         DbSet<Medicion> Mediciones { get; }
+        DbSet<ChatMensaje> ChatMensajes { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
