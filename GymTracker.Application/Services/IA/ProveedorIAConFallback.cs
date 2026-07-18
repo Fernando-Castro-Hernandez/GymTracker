@@ -48,5 +48,32 @@ namespace GymTracker.Services.IA
             throw new InvalidOperationException(
                 "Todos los proveedores de IA fallaron.", ultimaExcepcion);
         }
+
+        // Misma cadena de responsabilidad para el chat: prueba los proveedores en
+        // orden (Claude → Gemini) y devuelve la primera respuesta exitosa.
+        public async Task<RespuestaChat> ChatearAsync(
+            string systemPrompt, IReadOnlyList<MensajeChat> historial)
+        {
+            Exception? ultimaExcepcion = null;
+
+            foreach (var proveedor in _proveedores)
+            {
+                try
+                {
+                    var resultado = await proveedor.ChatearAsync(systemPrompt, historial);
+                    _logger.LogInformation("Chat respondido por el proveedor {Proveedor}.", proveedor.Nombre);
+                    return resultado;
+                }
+                catch (Exception ex)
+                {
+                    ultimaExcepcion = ex;
+                    _logger.LogWarning(ex,
+                        "El proveedor {Proveedor} falló en el chat. Intentando el siguiente.", proveedor.Nombre);
+                }
+            }
+
+            throw new InvalidOperationException(
+                "Todos los proveedores de IA fallaron.", ultimaExcepcion);
+        }
     }
 }

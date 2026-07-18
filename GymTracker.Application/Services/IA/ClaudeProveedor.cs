@@ -59,6 +59,56 @@ namespace GymTracker.Services.IA
             return analisis;
         }
 
+        // Chatbot con contexto (Integración 4). A diferencia del análisis, la
+        // respuesta es texto libre (un chat no necesita JSON). Aplica prompt
+        // caching sobre el bloque system (instrucciones + contexto del usuario):
+        // dentro de una misma conversación ese prefijo es idéntico entre turnos,
+        // así que los turnos 2..N lo leen de la caché en vez de re-tokenizarlo.
+        public async Task<RespuestaChat> ChatearAsync(
+            string systemPrompt, IReadOnlyList<MensajeChat> historial)
+        {
+            // El system se pasa como un bloque de texto marcado con cache_control
+            // "ephemeral" (la caché de Anthropic dura ~5 min, justo el ritmo de una
+            // conversación). El SDK solo permite cache_control en la forma de lista
+            // de bloques, no en el string simple.
+            var bloqueSystem = new TextBlockParam
+            {
+                Text = systemPrompt,
+                CacheControl = new CacheControlEphemeral()
+            };
+
+            var mensajes = historial
+                .Select(m => new MessageParam
+                {
+                    Role = m.EsDelUsuario ? Role.User : Role.Assistant,
+                    Content = m.Contenido
+                })
+                .ToList();
+
+            var parameters = new MessageCreateParams
+            {
+                Model = "claude-haiku-4-5",
+                MaxTokens = 800,
+                System = new List<TextBlockParam> { bloqueSystem },
+                Messages = mensajes
+            };
+
+            var respuesta = await _client.Messages.Create(parameters);
+
+            var texto = ExtraerTexto(respuesta).Trim();
+            var uso = respuesta.Usage;
+
+            // CacheReadInputTokens: cuántos tokens de entrada se sirvieron desde la
+            // caché (0/null en el primer turno; >0 en los siguientes). Evidencia
+            // empírica del ahorro para el ADR-07.
+            return new RespuestaChat(
+                Texto: texto,
+                Proveedor: Nombre,
+                TokensEntrada: (int)uso.InputTokens,
+                TokensSalida: (int)uso.OutputTokens,
+                TokensCacheados: (int?)uso.CacheReadInputTokens);
+        }
+
         // Recorre los bloques de contenido y concatena el texto.
         private static string ExtraerTexto(Message respuesta)
         {

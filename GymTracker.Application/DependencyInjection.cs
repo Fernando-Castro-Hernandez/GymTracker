@@ -57,6 +57,11 @@ namespace GymTracker.Application
 
             services.AddScoped<CoachService>();
 
+            // ===== Chatbot con contexto (Integración 4, ADR-07) =====
+            // Reutiliza el mismo IProveedorIA (gateway con fallback) del Coach.
+            services.AddScoped<ContextoChatBuilder>();
+            services.AddScoped<ChatService>();
+
             // ===== Catálogo de ejercicios (seed local + caché en memoria) =====
             services.AddMemoryCache();
             services.AddScoped<CatalogoService>();

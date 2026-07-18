@@ -43,6 +43,42 @@ namespace GymTracker.Services.IA
             return analisis;
         }
 
+        // Chatbot con contexto (Integración 4), proveedor de fallback. Gemini no
+        // separa system/user ni admite cache_control explícito (usa caché
+        // implícita), así que aplanamos las instrucciones + el historial en un
+        // solo prompt con etiquetas de rol. Se leen los tokens de UsageMetadata
+        // para la observabilidad (ADR-07).
+        public async Task<RespuestaChat> ChatearAsync(
+            string systemPrompt, IReadOnlyList<MensajeChat> historial)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine(systemPrompt);
+            sb.AppendLine();
+            sb.AppendLine("--- CONVERSACIÓN ---");
+            foreach (var m in historial)
+                sb.AppendLine($"{(m.EsDelUsuario ? "Usuario" : "Asistente")}: {m.Contenido}");
+            sb.AppendLine("Asistente:");
+
+            var respuesta = await _client.Models.GenerateContentAsync(
+                model: "gemini-flash-latest",
+                contents: sb.ToString());
+
+            var texto = (respuesta.Text ?? string.Empty).Trim();
+
+            // UsageMetadata puede venir null; se protege con GetValueOrDefault.
+            var uso = respuesta.UsageMetadata;
+            var tokensEntrada = uso?.PromptTokenCount ?? 0;
+            var tokensSalida = uso?.CandidatesTokenCount ?? 0;
+            var tokensCache = uso?.CachedContentTokenCount;
+
+            return new RespuestaChat(
+                Texto: texto,
+                Proveedor: Nombre,
+                TokensEntrada: tokensEntrada,
+                TokensSalida: tokensSalida,
+                TokensCacheados: tokensCache);
+        }
+
         private static string LimpiarJson(string texto)
         {
             texto = texto.Trim();
