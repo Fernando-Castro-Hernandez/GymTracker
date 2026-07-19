@@ -233,27 +233,31 @@ copiar el diagrama del libro tal cual. Toda la decisión está documentada en el
 
 ```mermaid
 flowchart TB
-    U(["👤 Usuario envía un mensaje"])
-    U --> G
+    U(["👤 Usuario"]) -->|mensaje| G
 
     subgraph APP["Pipeline en Application · orquestado por ChatService"]
         direction TB
-        G["🛡️ GuardarrielChat · <i>Input Protection</i><br/>longitud + injection"]
-        R["🧭 RouterContexto · <i>Gateway de CONTEXTO</i><br/>(no de modelo)"]
-        C["📦 ContextoChatBuilder · <i>Context Construction SIN RAG</i><br/>SQL + poda de 3 semanas"]
-        S["📝 System prompt estricto + prompt caching"]
-        G -->|válido| R --> C --> S
+        G["🛡️ GuardarrielChat<br/><i>Input Protection</i><br/>longitud + injection"]
+        G -->|válido| R["🧭 RouterContexto<br/><i>Gateway de CONTEXTO</i><br/>(no de modelo)"]
+        R --> C["📦 ContextoChatBuilder<br/><i>Context Construction SIN RAG</i><br/>SQL + poda de 3 semanas"]
+        C --> S["📝 System prompt estricto<br/>+ prompt caching"]
     end
 
-    S --> API["🤖 Proveedor con fallback · <i>Model API</i><br/>Claude Haiku → Gemini"]
-    API --> O["📊 Observabilidad<br/>tokens · latencia · caché"]
-    O --> P["💾 Persiste el turno en ChatMensajes"]
-    P --> RESP(["✅ Respuesta al usuario"])
-    G -.->|rechazo elegante| RESP
+    DB[("🗄️ PostgreSQL<br/>rutinas · sesiones · mediciones")] -->|retrieval SQL<br/>filtrado por UsuarioId| C
+    H[("💬 ChatMensajes<br/>historial")] -->|poda: últimos 12| C
 
-    DB[("🗄️ PostgreSQL<br/>rutinas · sesiones · mediciones")] -.->|retrieval SQL<br/>filtrado por UsuarioId| C
-    H[("💬 ChatMensajes<br/>historial")] -.->|poda: últimos 12| C
+    S --> API["🤖 Proveedor con fallback<br/>Claude Haiku → Gemini<br/><i>Model API</i>"]
+    API --> O["📊 Observabilidad<br/>tokens · latencia · caché"]
+    O --> P["💾 Persiste el turno<br/>en ChatMensajes"]
+    P -->|respuesta| U
+    G -.->|rechazo elegante| U
+
+    RAG["❌ RAG semántico"]:::descartado -.->|descartado| C
+    AG["❌ Capacidades agénticas"]:::descartado -.->|descartado| API
+
+    classDef descartado stroke:#ff4d5e,color:#ff4d5e,stroke-dasharray:5 5,fill:transparent;
 ```
+
 
 > Compáralo con el diagrama del libro: las mismas cajas conceptuales (*context
 > construction*, *input/output protection*, *model gateway*, *cache*, *agentic*),
