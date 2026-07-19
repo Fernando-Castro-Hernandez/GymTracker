@@ -231,35 +231,13 @@ copiar el diagrama del libro tal cual. Toda la decisión está documentada en el
 
 ### La arquitectura que diseñamos
 
-```mermaid
-flowchart TB
-    U(["👤 Usuario"]) -->|mensaje| G
+<div align="center">
 
-    subgraph APP["Pipeline en Application · orquestado por ChatService"]
-        direction TB
-        G["🛡️ GuardarrielChat<br/><i>Input Protection</i><br/>longitud + injection"]
-        G -->|válido| R["🧭 RouterContexto<br/><i>Gateway de CONTEXTO</i><br/>(no de modelo)"]
-        R --> C["📦 ContextoChatBuilder<br/><i>Context Construction SIN RAG</i><br/>SQL + poda de 3 semanas"]
-        C --> S["📝 System prompt estricto<br/>+ prompt caching"]
-    end
+<img src="./docs/Images/arquitectura-chatbot.png" alt="Diagrama de la arquitectura del chatbot: Usuario → GuardarrielChat (Input Protection) → RouterContexto (Gateway de contexto) → ContextoChatBuilder (Context Construction sin RAG, alimentado por PostgreSQL y ChatMensajes) → System prompt + prompt caching → Proveedor con fallback (Model API) → Observabilidad → persistencia y respuesta al usuario">
 
-    DB[("🗄️ PostgreSQL<br/>rutinas · sesiones · mediciones")] -->|retrieval SQL<br/>filtrado por UsuarioId| C
-    H[("💬 ChatMensajes<br/>historial")] -->|poda: últimos 12| C
+</div>
 
-    S --> API["🤖 Proveedor con fallback<br/>Claude Haiku → Gemini<br/><i>Model API</i>"]
-    API --> O["📊 Observabilidad<br/>tokens · latencia · caché"]
-    O --> P["💾 Persiste el turno<br/>en ChatMensajes"]
-    P -->|respuesta| U
-    G -.->|rechazo elegante| U
-
-    RAG["❌ RAG semántico"]:::descartado -.->|descartado| C
-    AG["❌ Capacidades agénticas"]:::descartado -.->|descartado| API
-
-    classDef descartado stroke:#ff4d5e,color:#ff4d5e,stroke-dasharray:5 5,fill:transparent;
-```
-
-
-> Compáralo con el diagrama del libro: las mismas cajas conceptuales (*context
+> Comparado con el diagrama del libro: las mismas cajas conceptuales (*context
 > construction*, *input/output protection*, *model gateway*, *cache*, *agentic*),
 > pero cada una **resuelta según la realidad de GymTracker**, no por inercia.
 
