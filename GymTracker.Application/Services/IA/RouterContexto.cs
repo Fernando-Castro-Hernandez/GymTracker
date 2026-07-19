@@ -31,12 +31,17 @@ namespace GymTracker.Services.IA
             "historial", "serie", "series", "sesión", "sesion", "sesiones", "cuántas veces"
         ];
 
+        // Incluye la PRIMERA PERSONA ("mejoro", "optimizo") además del infinitivo
+        // y la tercera persona: el usuario pregunta desde su propio punto de
+        // vista ("¿cómo mejoro mi rutina?"), que es la forma más natural en un
+        // chat. Detectado por RouterContextoTests, que evidenció que esas
+        // preguntas caían en General y el modelo respondía sin contexto.
         private static readonly string[] PalabrasConsejo =
         [
-            "mejora", "mejorar", "recomienda", "recomiendas", "recomiéndame", "recomiendame",
+            "mejora", "mejorar", "mejoro", "recomienda", "recomiendas", "recomiéndame", "recomiendame",
             "debería", "deberia", "cómo hago", "como hago", "consejo", "consejos",
-            "sugerencia", "sugiere", "optimiza", "optimizar", "equilibra", "balance",
-            "balancea", "técnica", "tecnica", "descanso", "qué hago", "que hago"
+            "sugerencia", "sugiere", "optimiza", "optimizar", "optimizo", "equilibra", "balance",
+            "balancea", "equilibro", "técnica", "tecnica", "descanso", "qué hago", "que hago"
         ];
 
         public static TipoConsulta Clasificar(string mensaje)
