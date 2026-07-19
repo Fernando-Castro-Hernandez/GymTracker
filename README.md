@@ -29,15 +29,16 @@ mide tu progreso corporal y visualiza tu evolución de fuerza con el tiempo.
 1. [Sobre el proyecto](#-sobre-el-proyecto)
 2. [Funcionalidades](#-funcionalidades)
 3. [Cómo usar GymTracker](#-cómo-usar-gymtracker-flujo)
-4. [Capturas](#-capturas)
+4. [Vistas](#vistas)
 5. [Tecnologías](#-tecnologías)
 6. [Arquitectura y decisiones](#-arquitectura-y-decisiones)
-7. [Cómo ejecutar el proyecto](#-cómo-ejecutar-el-proyecto)
-8. [Hoja de ruta](#-hoja-de-ruta)
-9. [Uso de IA en el desarrollo](#-uso-de-ia-en-el-desarrollo)
-10. [Agradecimientos](#-agradecimientos)
-11. [Licencia](#-licencia)
-12. [Autor](#-autor)
+7. [Ingeniería del Chatbot IA](#-ingeniería-del-chatbot-ia)
+8. [Cómo ejecutar el proyecto](#-cómo-ejecutar-el-proyecto)
+9. [Hoja de ruta](#-hoja-de-ruta)
+10. [Uso de IA en el desarrollo](#-uso-de-ia-en-el-desarrollo)
+11. [Agradecimientos](#-agradecimientos)
+12. [Licencia](#-licencia)
+13. [Autor](#-autor)
 
 ---
 
@@ -206,6 +207,118 @@ como **ADR** (Architecture Decision Records) en [`docs/ADR/`](./docs/ADR).
 - **DTOs** en la API para evitar ciclos de serialización de EF Core.
 
 </details>
+
+<p align="right">(<a href="#readme-top">volver arriba</a>)</p>
+
+---
+
+## Ingeniería del Chatbot IA
+
+El chatbot de GymTracker no es "otro *wrapper* de ChatGPT". Se diseñó como un
+**pipeline de aplicación con LLM** siguiendo el marco de *AI Engineering* de **Chip
+Huyen**, y su mayor valor es **arquitectónico**: cada etapa del pipeline se adaptó
+—con trade-offs explícitos— a lo que *este* sistema realmente necesita, en lugar de
+copiar el diagrama del libro tal cual. Toda la decisión está documentada en el
+**[ADR-07](./docs/ADR/ADR-07-Fernando-Castro.md)**.
+
+<div align="center">
+
+<img src="./docs/Images/IA%20Engineering%20Book.jpg" width="200" alt="Portada del libro AI Engineering de Chip Huyen (O'Reilly)">
+
+<sub><i>Marco de referencia: <b>AI Engineering — Building Applications with Foundation Models</b>, Chip Huyen (O'Reilly).</i></sub>
+
+</div>
+
+### La arquitectura que diseñamos
+
+```mermaid
+flowchart TB
+    U(["👤 Usuario"]) -->|mensaje| G
+
+    subgraph APP["Pipeline en Application · orquestado por ChatService"]
+        direction TB
+        G["GuardarrielChat<br/><i>Input Protection</i><br/>longitud + injection"]
+        G -->|válido| R["RouterContexto<br/><i>Gateway de CONTEXTO</i><br/>(no de modelo)"]
+        R --> C["ContextoChatBuilder<br/><i>Context Construction SIN RAG</i><br/>SQL + poda de 3 semanas"]
+        C --> S["📝 System prompt estricto<br/>+ prompt caching"]
+    end
+
+    DB[("PostgreSQL<br/>rutinas · sesiones · mediciones")] -->|retrieval SQL<br/>filtrado por UsuarioId| C
+    H[("💬 ChatMensajes<br/>historial")] -->|poda: últimos 12| C
+
+    S --> API["Proveedor con fallback<br/>Claude Haiku → Gemini<br/><i>Model API</i>"]
+    API --> O["📊 Observabilidad<br/>tokens · latencia · caché"]
+    O --> P["Persiste el turno<br/>en ChatMensajes"]
+    P -->|respuesta| U
+    G -.->|rechazo elegante| U  
+
+    classDef descartado stroke:#ff4d5e,color:#ff4d5e,stroke-dasharray:5 5,fill:transparent;
+```
+
+> Compáralo con el diagrama del libro: las mismas cajas conceptuales (*context
+> construction*, *input/output protection*, *model gateway*, *cache*, *agentic*),
+> pero cada una **resuelta según la realidad de GymTracker**, no por inercia.
+
+### Los 6 puntos: qué dice el libro vs. qué aplicamos aquí
+
+| # | Etapa (libro) | Qué propone el libro | Qué aplicamos en GymTracker | Trade-off asumido |
+|:-:|---------------|----------------------|-----------------------------|-------------------|
+| 1 | **Context Construction** | RAG (embeddings + búsqueda vectorial) para hallar el fragmento relevante en texto no estructurado. | **Retrieval SQL + poda.** Los datos son **relacionales**, así que la consulta correcta es SQL exacto + agregación, no búsqueda por similitud. El crecimiento se acota con **poda por ventana de tiempo** (3 semanas, ya agregadas). | Menos "mágico" que RAG, pero **exacto y sin dependencias**. Un tonelaje se *suma*, no se *recupera por parecido*. |
+| 2 | **Input Protection** | Filtrar/limpiar la entrada del usuario. | **Guardarriel determinista** (longitud + injection) como *higiene*, y el **system prompt estricto como defensa real**, marcando los datos como *datos-no-instrucciones*. | El regex solo, sería frágil y con falsos positivos; se relega a primera línea y el prompt hace el trabajo pesado. |
+| 3 | **Model Gateway** | Enrutar a **modelos** distintos según la complejidad, para ahorrar. | **Router de CONTEXTO, no de modelo.** En mono-usuario con Haiku, cambiar de modelo ahorra ≈ $0; enrutamos *cuánto contexto cargar*, que es lo que **sí** mueve el costo. | Adaptación consciente del patrón: misma idea, palanca distinta. |
+| 4 | **Cache** | *Exact* o *semantic caching* de respuestas. | **Prompt caching nativo** de Anthropic sobre el prefijo *system*. | *Exact*: hit-rate ≈ 0 en un chat; *semantic*: riesgo de responder "parecido" pero mal. El de prefijo es transparente y seguro. |
+| 5 | **Output Protection** | Validar/moderar la salida del modelo. | Reglas en el system prompt: **no consejo médico**, **no inventar cifras**, mantenerse en dominio. | Suficiente para el alcance; una capa de moderación externa sería sobreingeniería aquí. |
+| 6 | **Agentic ("do something automatically")** | Dar herramientas al modelo para que actúe en bucle. | **Descartado a conciencia.** | Bucle multi-turno, latencia y depuración a cambio de un beneficio marginal cuando las consultas son predecibles. |
+
+### Las 4 piezas clave (y por qué importan)
+
+- **`ChatService` — el orquestador.** Es el "director de orquesta": encadena las
+  etapas (guardarriel → router → contexto → modelo → persistencia) y es donde vive
+  el **manejo de estado conversacional**. La API del LLM es *stateless*; este
+  servicio es quien convierte una secuencia de llamadas sin memoria en una
+  conversación coherente, guardando y **podando** el historial en cada turno.
+- **`RouterContexto` — decide cuánto "pensar".** Clasifica la intención
+  (datos / consejo / general) para armar solo el contexto necesario. Un "hola" no
+  arrastra tres semanas de sesiones. Es la pieza que **traduce el patrón *Model
+  Gateway* a la palanca real de costo** de este sistema.
+- **`ContextoChatBuilder` — el retrieval sin RAG.** Construye el contexto desde la
+  base de datos con SQL **filtrado por `UsuarioId`** y **pre-agregado** (tonelaje
+  por sesión y por grupo). Es la evidencia de que *no todo problema de contexto se
+  resuelve con embeddings*: cuando los datos son estructurados, SQL gana.
+- **`GuardarrielChat` — la primera línea de defensa.** Valida la entrada de forma
+  determinista antes de gastar un solo token. Encarna un principio de seguridad:
+  **fallar barato y temprano**, y no confiar la seguridad a una sola capa.
+
+### Cómo esto reduce el costo real de la API (y por qué se mide)
+
+Cada llamada a un LLM se paga **por token**. Las técnicas anteriores atacan el costo
+por dos frentes concretos:
+
+- **Poda de contexto** (etapa 1 + historial de 12 mensajes): mantiene el *input* en
+  ~1–1.5K tokens **sin importar cuántos meses de datos acumule el usuario**. Sin
+  poda, un atleta constante desbordaría la ventana o dispararía el costo con el
+  tiempo. Es la diferencia entre un costo **acotado** y uno que **crece sin techo**.
+- **Prompt caching** (etapa 4): dentro de una conversación, el prefijo *system* se
+  **lee de caché** en los turnos siguientes en lugar de re-tokenizarse.
+- **Router de contexto** (etapa 3): las preguntas triviales no cargan el contexto
+  pesado.
+
+Y aquí está lo importante: **no lo afirmamos, lo medimos.** Cada respuesta registra
+**tokens de entrada/salida, tokens servidos de caché y latencia**, en los logs y en
+la tabla `ChatMensajes`. Eso convierte "creo que es barato" en **evidencia
+empírica** —se puede ver el ahorro del caché aparecer a partir del segundo turno—.
+
+### Por qué esto vale en el mundo real
+
+En un proyecto personal, el costo de un LLM son centavos y "no importa". En
+producción, con miles de usuarios, **cada una de estas decisiones se multiplica** y
+se convierte en la diferencia entre un producto rentable y uno que quema dinero. La
+industria no valora "saber llamar a una API de IA" —eso lo hace cualquiera—; valora
+a quien sabe **construir contexto con criterio, contener el costo, poner
+guardarriles y, sobre todo, *medir*** lo que gasta y cómo rinde. Esta
+implementación es, deliberadamente, un ejercicio de **esas** competencias: la
+observabilidad y los trade-offs explícitos son exactamente lo que se espera de un
+ingeniero que lleva IA a producción, no solo a una demo.
 
 <p align="right">(<a href="#readme-top">volver arriba</a>)</p>
 
