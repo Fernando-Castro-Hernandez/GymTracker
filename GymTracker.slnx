@@ -3,4 +3,5 @@
   <Project Path="GymTracker.Application/GymTracker.Application.csproj" />
   <Project Path="GymTracker.Infrastructure/GymTracker.Infrastructure.csproj" />
   <Project Path="GymTracker.Web/GymTracker.Web.csproj" />
+  <Project Path="GymTracker.Tests/GymTracker.Tests.csproj" />
 </Solution>
