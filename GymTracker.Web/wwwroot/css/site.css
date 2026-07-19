@@ -1864,3 +1864,40 @@ dd {
         opacity: 0.5;
         cursor: default;
     }
+
+
+/* ==========================================================================
+   Pantalla de carga (Lottie)
+   Overlay a pantalla completa con la animación del logo. Se muestra en cada
+   carga de página y hace fade-out cuando el DOM está listo (lógica en site.js).
+   ========================================================================== */
+.gt-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 2000; /* por encima de todo, incluida la burbuja del chat (1000) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gt-bg);
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+    /* Estado oculto: se desvanece y deja de capturar clics. */
+    .gt-loader.gt-loader-hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+.gt-loader-anim {
+    width: min(320px, 60vw);
+    height: min(320px, 60vw);
+}
+
+/* Accesibilidad: si el usuario pide menos movimiento, no reproducimos la
+   animación ni el fade; el overlay se retira de inmediato desde site.js. */
+@media (prefers-reduced-motion: reduce) {
+    .gt-loader {
+        transition: none;
+    }
+}

@@ -19,6 +19,13 @@
     <link rel="stylesheet" href="~/GymTracker.styles.css" asp-append-version="true" />
 </head>
 <body>
+    @* Pantalla de carga (Lottie): overlay a pantalla completa que se muestra en
+       cada carga de página y hace fade-out cuando el DOM está listo. La lógica
+       vive en site.js; el estilo en site.css. Es puramente visual. *@
+    <div id="gt-loader" class="gt-loader" aria-hidden="true">
+        <div id="gt-loader-anim" class="gt-loader-anim"></div>
+    </div>
+
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm gt-navbar mb-4">
             <div class="container">
@@ -83,6 +90,7 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/lottie/lottie.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
