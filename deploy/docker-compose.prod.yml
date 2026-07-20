@@ -1,0 +1,104 @@
+# Orquestación de PRODUCCIÓN, para la instancia EC2 (ADR-09).
+#
+# Este archivo NO reemplaza al docker-compose.yml de la raíz, que se queda para
+# desarrollo local. Diferencias clave:
+#   · Aquí NO hay contenedor de PostgreSQL: la base de datos es Amazon RDS,
+#     gestionada, con backups automáticos y en su propia subred privada.
+#   · Aquí sí hay Caddy, que termina el TLS y hace de proxy inverso.
+#   · La imagen de la app no se construye aquí: se descarga ya compilada desde
+#     ECR, publicada por el pipeline de CI/CD.
+#
+# Uso en la EC2 (un script lee los secretos de SSM Parameter Store y los deja en
+# /opt/gymtracker/.env antes de esto):
+#   docker compose -f docker-compose.prod.yml up -d
+
+services:
+  gymtracker-app:
+    # Imagen publicada en ECR por GitHub Actions. IMAGEN_URI llega por variable
+    # de entorno para poder desplegar una versión concreta por su SHA de commit
+    # y, si algo sale mal, volver a la anterior cambiando una sola variable.
+    image: ${IMAGEN_URI}
+    container_name: gymtracker-app
+    restart: unless-stopped
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+
+      # Secretos. NINGUNO está escrito aquí: llegan del archivo .env que el
+      # script de arranque genera leyendo SSM Parameter Store con el rol IAM de
+      # la instancia. El doble guion bajo es la convención de ASP.NET Core para
+      # anidar configuración (ConnectionStrings:DefaultConnection).
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection}
+      Anthropic__ApiKey: ${Anthropic__ApiKey}
+      Gemini__ApiKey: ${Gemini__ApiKey}
+
+    volumes:
+      # Llaves de Data Protection de ASP.NET Core, que cifran las cookies de
+      # sesión de Identity. Sin este volumen viven dentro del contenedor y se
+      # pierden al recrearlo, obligando a TODOS los usuarios a iniciar sesión de
+      # nuevo en cada despliegue. Detectado como advertencia al probar la imagen
+      # en local.
+      - claves-dataprotection:/home/app/.aspnet/DataProtection-Keys
+
+    # NO se publica ningún puerto al host: la app sólo es alcanzable desde la red
+    # interna de Docker. El único que habla con internet es Caddy. Si la app
+    # expusiera el 8080 al host, se podría entrar saltándose el HTTPS.
+    expose:
+      - "8080"
+
+    networks:
+      - interna
+
+    logging:
+      # Sin límite, los logs llenan el disco de 20 GB de la EC2 en semanas.
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: gymtracker-caddy
+    restart: unless-stopped
+
+    # Los únicos puertos abiertos a internet.
+    #   80  → redirección a HTTPS y desafío ACME de Let's Encrypt (necesario
+    #         para emitir y renovar el certificado; no se puede cerrar).
+    #   443 → el tráfico real.
+    ports:
+      - "80:80"
+      - "443:443"
+
+    environment:
+      # El dominio para el que Caddy pedirá el certificado.
+      DOMINIO: ${DOMINIO}
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Los certificados emitidos. Persistirlos es importante: Let's Encrypt
+      # limita a 5 certificados por dominio por semana, y sin este volumen Caddy
+      # pediría uno nuevo en cada reinicio hasta agotar la cuota.
+      - caddy-datos:/data
+      - caddy-config:/config
+
+    depends_on:
+      - gymtracker-app
+
+    networks:
+      - interna
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  interna:
+    driver: bridge
+
+volumes:
+  caddy-datos:
+  caddy-config:
+  claves-dataprotection:

@@ -1,10 +1,10 @@
 # Empaquetado de GymTracker para producción (ADR-09).
 #
-# Build multi-etapa: se compila con el SDK completo (~800 MB) pero la imagen
-# final sólo lleva el runtime de ASP.NET (~780 MB) y los .dll publicados. La
-# imagen resultante es ~6 veces más pequeña, se descarga más rápido en cada
-# despliegue y no contiene código fuente ni compilador, reduciendo la superficie
-# de ataque.
+# Build multi-etapa: se compila con el SDK completo pero la imagen final sólo
+# lleva el runtime de ASP.NET y los .dll publicados. Medido en este proyecto:
+# imagen final de 447 MB, de los que 78 MB son la aplicación publicada. No
+# contiene código fuente ni compilador, con lo que se descarga más rápido en
+# cada despliegue y se reduce la superficie de ataque.
 #
 # Construir en local (desde la raíz del repo):
 #   docker build -t gymtracker .

@@ -1,0 +1,52 @@
+# Configuración de Caddy — proxy inverso y terminación TLS (ADR-09).
+#
+# Caddy recibe el tráfico de internet en 80/443, obtiene y RENUEVA SOLO el
+# certificado de Let's Encrypt, y reenvía las peticiones a la app por HTTP en la
+# red interna de Docker.
+#
+# Se eligió sobre nginx porque la gestión del certificado es automática de
+# fábrica: con nginx habría que montar certbot aparte y configurar un cron de
+# renovación cada 90 días, un paso manual más que se puede olvidar.
+#
+# {$DOMINIO} se sustituye por la variable de entorno definida en
+# docker-compose.prod.yml. Así el mismo archivo sirve para el dominio real y
+# para pruebas con la IP pública, sin editarlo.
+
+{$DOMINIO} {
+	# Todo el tráfico va a la app. 'gymtracker-app' es el nombre del servicio en
+	# docker-compose: Docker resuelve ese nombre a la IP interna del contenedor,
+	# así que no hace falta conocer ninguna IP.
+	reverse_proxy gymtracker-app:8080 {
+		# CRÍTICO: sin estas cabeceras, Kestrel cree que la petición llegó por
+		# HTTP inseguro y UseHttpsRedirection() la redirige a HTTPS, lo que
+		# vuelve a entrar por Caddy y se reenvía por HTTP otra vez -> bucle
+		# infinito de redirecciones.
+		#
+		# X-Forwarded-Proto le dice a la app el esquema ORIGINAL (https), y
+		# X-Forwarded-For la IP real del visitante en lugar de la de Caddy.
+		# El lado de la app se configura con UseForwardedHeaders en Program.cs.
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-For {remote_host}
+		header_up Host {host}
+	}
+
+	# Compresión: las vistas Razor y el JSON de la API son texto y comprimen muy
+	# bien. Reduce el tráfico de salida, que en AWS se cobra por GB.
+	encode gzip zstd
+
+	# Cabeceras de seguridad. Caddy ya envía HSTS por su cuenta al servir HTTPS.
+	header {
+		# Evita que el navegador adivine el tipo de contenido (ataques MIME).
+		X-Content-Type-Options nosniff
+		# Impide que la app se muestre dentro de un iframe ajeno (clickjacking).
+		X-Frame-Options DENY
+		# No revelar qué servidor corre detrás.
+		-Server
+	}
+
+	# Logs en formato JSON hacia stdout, para poder leerlos con `docker logs`.
+	log {
+		output stdout
+		format json
+	}
+}
