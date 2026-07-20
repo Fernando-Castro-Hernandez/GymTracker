@@ -1,0 +1,55 @@
+# Integración Continua de GymTracker.
+#
+# Qué hace: en cada push y en cada Pull Request, GitHub enciende una máquina
+# Ubuntu limpia, descarga el código, instala el SDK de .NET, compila la solución
+# y ejecuta la suite de pruebas xUnit. Si algo falla, el check sale en rojo y el
+# Pull Request queda marcado antes de que nada llegue a main.
+#
+# Por qué existe: las pruebas solo protegen si alguien las corre. Automatizarlas
+# elimina el "se me olvidó ejecutarlas antes de subir".
+
+name: CI
+
+on:
+  # En cada push a estas ramas: retroalimentación inmediata mientras trabajas.
+  # OJO: 'push:' sin valor debajo se interpreta como null y GitHub rechaza el
+  # workflow con startup_failure. El evento necesita configuración explícita.
+  push:
+    branches:
+      - main
+      - 'pruebas-ci'
+      - 'despliegue-aws'
+  # Y en cada Pull Request hacia main: es lo que pinta el check ✅ / ❌ en el PR.
+  pull_request:
+    branches: [main]
+
+jobs:
+  pruebas:
+    name: Compilar y probar
+    runs-on: ubuntu-latest
+
+    steps:
+      # El runner arranca vacío: sin código, sin .NET, sin nada. Estos dos
+      # primeros pasos son los que lo preparan.
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar el SDK de .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          # Fijado a la versión mayor del proyecto (ver los .csproj: net10.0).
+          # Sin esto, el runner usaría la versión de .NET que traiga por defecto.
+          dotnet-version: '10.0.x'
+
+      # Los tres pasos se separan a propósito, con --no-restore y --no-build,
+      # para que el log diga EXACTAMENTE en cuál falló: descargar paquetes,
+      # compilar, o una prueba en rojo. Son tres causas con tres arreglos
+      # distintos, y además no se repite trabajo ya hecho.
+      - name: Restaurar los paquetes NuGet
+        run: dotnet restore GymTracker.slnx
+
+      - name: Compilar la solución
+        run: dotnet build GymTracker.slnx --configuration Release --no-restore
+
+      - name: Ejecutar las pruebas xUnit
+        run: dotnet test GymTracker.slnx --configuration Release --no-build --verbosity normal
