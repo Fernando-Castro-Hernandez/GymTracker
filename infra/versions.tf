@@ -59,9 +59,9 @@ provider "aws" {
   #      algo que importa cuando se busca un recurso olvidado que está cobrando.
   default_tags {
     tags = {
-      Proyecto  = "GymTracker"
-      Gestion   = "Terraform"
-      Ambiente  = var.ambiente
+      Proyecto = "GymTracker"
+      Gestion  = "Terraform"
+      Ambiente = var.ambiente
     }
   }
 }

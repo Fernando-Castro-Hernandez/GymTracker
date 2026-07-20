@@ -50,9 +50,9 @@ resource "aws_internet_gateway" "principal" {
 # Subred PÚBLICA — la EC2 con la app y Caddy
 # ==========================================================================
 resource "aws_subnet" "publica" {
-  vpc_id                  = aws_vpc.principal.id
-  cidr_block              = "10.0.1.0/24" # 256 direcciones, de sobra para 1 instancia
-  availability_zone       = data.aws_availability_zones.disponibles.names[0]
+  vpc_id            = aws_vpc.principal.id
+  cidr_block        = "10.0.1.0/24" # 256 direcciones, de sobra para 1 instancia
+  availability_zone = data.aws_availability_zones.disponibles.names[0]
 
   # Asigna IP pública automáticamente a lo que se lance aquí. La EC2 necesita
   # salida a internet para descargar la imagen de ECR y para que Caddy complete

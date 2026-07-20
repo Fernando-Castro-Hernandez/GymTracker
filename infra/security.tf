@@ -30,7 +30,7 @@ resource "aws_vpc_security_group_ingress_rule" "ec2_http" {
   # NOTA: sin apostrofes. La API de EC2 rechaza las descripciones que no usen el
   # juego a-zA-Z0-9 y . _-:/()#,@[]+=&;{}!$* — un limite que `terraform plan` no
   # detecta, porque solo lo valida AWS al recibir la peticion.
-  description       = "HTTP: redireccion a HTTPS y desafio ACME de Lets Encrypt"
+  description = "HTTP: redireccion a HTTPS y desafio ACME de Lets Encrypt"
 
   cidr_ipv4   = "0.0.0.0/0" # Cualquier origen: es un sitio web público
   from_port   = 80

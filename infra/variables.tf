@@ -128,6 +128,24 @@ variable "db_password" {
   }
 }
 
+# ===== Despliegue continuo =====
+
+variable "repositorio_github" {
+  description = "Repositorio en formato usuario/repo. Acota qué puede asumir el rol OIDC."
+  type        = string
+  default     = "Fernando-Castro-Hernandez/GymTracker"
+
+  # Este valor es la frontera de seguridad del rol de GitHub Actions: el rol sólo
+  # confía en tokens emitidos para ESTE repositorio y desde la rama main. Si
+  # alguien copiara el workflow a otro repositorio, su token declararía otro
+  # `repo:` y AWS rechazaría la petición.
+
+  validation {
+    condition     = can(regex("^[^/]+/[^/]+$", var.repositorio_github))
+    error_message = "Debe tener el formato usuario/repositorio, sin la URL completa."
+  }
+}
+
 # ===== Aplicación =====
 
 variable "dominio" {
