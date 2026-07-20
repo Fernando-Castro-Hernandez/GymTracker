@@ -51,7 +51,7 @@ services:
       - interna
 
     logging:
-      # Sin límite, los logs llenan el disco de 20 GB de la EC2 en semanas.
+      # Sin límite, los logs llenan el disco de 30 GB de la EC2 en semanas.
       driver: "json-file"
       options:
         max-size: "10m"

@@ -43,3 +43,27 @@ output "vpc_id" {
   description = "ID de la VPC, por si hace falta para diagnosticar."
   value       = aws_vpc.principal.id
 }
+
+# ===== Cómputo =====
+
+output "ip_publica" {
+  description = "IP elástica de la app. A esta dirección apunta el registro A de Cloudflare."
+  value       = aws_eip.app.public_ip
+}
+
+output "instancia_id" {
+  description = "ID de la EC2. Lo usa el pipeline de CD en aws ssm send-command."
+  value       = aws_instance.app.id
+}
+
+output "url_temporal" {
+  description = "Direccion para probar antes de tener dominio."
+  value       = "http://${aws_eip.app.public_ip}"
+}
+
+# Comando listo para copiar: abre una terminal en la instancia SIN SSH, sin
+# puerto 22 abierto y sin llave privada.
+output "comando_conectar" {
+  description = "Como entrar a la instancia por SSM Session Manager."
+  value       = "aws ssm start-session --target ${aws_instance.app.id} --region ${var.region}"
+}

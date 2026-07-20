@@ -56,11 +56,19 @@ variable "tipo_instancia" {
 variable "tamano_disco_gb" {
   description = "Tamaño del disco EBS de la EC2, en GB."
   type        = number
-  default     = 20
+  default     = 30
+
+  # 30 GB es el MÍNIMO que exige el AMI de Amazon Linux 2023: su snapshot base ya
+  # ocupa ese tamaño y EC2 rechaza el arranque con menos ("Volume of size 20GB is
+  # smaller than snapshot, expect size >= 30GB"). Cuesta $2.40/mes en gp3, $0.80
+  # más que los 20 GB que se habían previsto.
+  #
+  # De paso da margen para las imágenes de Docker: la de GymTracker pesa 447 MB y
+  # se conservan varias versiones entre despliegues.
 
   validation {
-    condition     = var.tamano_disco_gb >= 20 && var.tamano_disco_gb <= 100
-    error_message = "El disco debe estar entre 20 y 100 GB: menos no alcanza para el SO más las imágenes de Docker, y más es gasto innecesario."
+    condition     = var.tamano_disco_gb >= 30 && var.tamano_disco_gb <= 100
+    error_message = "El disco debe estar entre 30 y 100 GB: el AMI de Amazon Linux 2023 exige 30 como mínimo, y más de 100 es gasto innecesario."
   }
 }
 

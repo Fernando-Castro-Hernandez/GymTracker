@@ -245,23 +245,17 @@ data "aws_iam_policy_document" "github_despliegue" {
   # compose pull && up -d"` de un despliegue tradicional: sin puerto 22 abierto y
   # sin llave privada guardada en GitHub.
   #
-  # PENDIENTE: este bloque se activa al crear la EC2 en compute.tf. Va comentado
-  # porque referencia aws_instance.app.id, que todavía no existe, y `terraform
-  # validate` falla con una referencia a un recurso no declarado. Se prefiere
-  # dejarlo escrito y comentado antes que apuntar a "*", que permitiría ejecutar
-  # comandos en CUALQUIER instancia de la cuenta.
-  #
-  # statement {
-  #   sid     = "EjecutarElRedespliegueEnLaInstancia"
-  #   actions = ["ssm:SendCommand"]
-  #   resources = [
-  #     # Acotado A ESTA instancia. Con "*" podría ejecutar comandos en cualquier
-  #     # máquina de la cuenta.
-  #     "arn:aws:ec2:${data.aws_region.actual.region}:${data.aws_caller_identity.actual.account_id}:instance/${aws_instance.app.id}",
-  #     # El documento de SSM que ejecuta comandos de shell.
-  #     "arn:aws:ssm:${data.aws_region.actual.region}::document/AWS-RunShellScript"
-  #   ]
-  # }
+  statement {
+    sid     = "EjecutarElRedespliegueEnLaInstancia"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      # Acotado A ESTA instancia. Con "*" podría ejecutar comandos en cualquier
+      # máquina de la cuenta.
+      "arn:aws:ec2:${data.aws_region.actual.region}:${data.aws_caller_identity.actual.account_id}:instance/${aws_instance.app.id}",
+      # El documento de SSM que ejecuta comandos de shell.
+      "arn:aws:ssm:${data.aws_region.actual.region}::document/AWS-RunShellScript"
+    ]
+  }
 
   # Consultar si el comando terminó bien. Sólo lectura; no admite acotarse por
   # recurso porque el ID de la invocación no se conoce de antemano.
