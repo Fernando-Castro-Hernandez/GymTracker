@@ -1,0 +1,52 @@
+# Archivos que NUNCA deben entrar en la imagen de Docker.
+#
+# Sin este archivo, `docker build` envía todo el directorio al motor de Docker.
+# Eso haría el build lento y, sobre todo, metería secretos y basura de compilación
+# dentro de una imagen que después se sube a un registro.
+
+# ===== Secretos: lo más importante de esta lista =====
+.env
+*.env
+!.env.example
+**/appsettings.*.Local.json
+*.pfx
+*.key
+*.pem
+
+# ===== Resultados de compilación locales =====
+# Se recompila dentro del contenedor: copiarlos sería inútil y además podrían
+# ser de otra plataforma (Windows) y romper el build de Linux.
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# ===== Control de versiones y CI =====
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# ===== Proyecto de pruebas =====
+# Las pruebas corren en el pipeline de CI (ADR-08), no en el servidor.
+GymTracker.Tests/
+
+# ===== Documentación =====
+docs/
+*.md
+!README.md
+
+# ===== Herramientas y entorno local =====
+.vs/
+.vscode/
+.idea/
+.claude/
+*.user
+*.suo
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# ===== Sistema operativo =====
+**/.DS_Store
+**/Thumbs.db
