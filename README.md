@@ -141,6 +141,8 @@ flowchart LR
 ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=flat-square&logo=swagger&logoColor=black)
 ![Claude](https://img.shields.io/badge/Anthropic_Claude-D97757?style=flat-square&logo=anthropic&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=flat-square&logo=googlegemini&logoColor=white)
+![xUnit](https://img.shields.io/badge/xUnit-512BD4?style=flat-square&logo=dotnet&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white)
 
 </div>
 
@@ -153,6 +155,8 @@ flowchart LR
 | Autenticación | ASP.NET Core Identity | Usuarios y sesiones (cookies) |
 | IA | Claude Haiku + Gemini (fallback) | Coach (análisis de rutinas) y Chatbot con contexto |
 | Frontend | Bootstrap 5 + Chart.js | Estilos y visualización de datos |
+| Pruebas | xUnit + EF Core InMemory | 123 pruebas unitarias de la capa Application |
+| CI | GitHub Actions | Compila y ejecuta las pruebas en cada push y Pull Request |
 
 <p align="right">(<a href="#readme-top">volver arriba</a>)</p>
 
@@ -169,7 +173,8 @@ GymTracker.slnx
 ├── GymTracker.Domain          → Entidades y enums (núcleo, sin dependencias)
 ├── GymTracker.Application      → Servicios de negocio, DTOs e interfaces        → Domain
 ├── GymTracker.Infrastructure   → ApplicationDbContext, migraciones, Identity     → Domain, Application
-└── GymTracker.Web              → MVC, API REST, Identity UI (composition root)   → Application, Infrastructure
+├── GymTracker.Web              → MVC, API REST, Identity UI (composition root)   → Application, Infrastructure
+└── GymTracker.Tests            → Pruebas unitarias xUnit (ADR-08)                → Application, Domain
 ```
 
 Dirección de dependencia: **`Web → Application → Domain`**, con `Infrastructure`
@@ -200,6 +205,11 @@ como **ADR** (Architecture Decision Records) en [`docs/ADR/`](./docs/ADR).
 - **Catálogo con *seed* local (ADR-06):** el catálogo de +1300 ejercicios se lee
   de un JSON local cacheado en memoria; **no** se llama a la API externa en runtime
   (patrón cache-aside, para evitar rate limits y desacoplar el nº de usuarios).
+- **Pruebas y CI (ADR-08):** 123 pruebas xUnit sobre las clases que sostienen
+  decisiones arquitectónicas, no sobre las más fáciles de probar. Es posible
+  aislarlas gracias a la abstracción `IApplicationDbContext` del ADR-03: la capa
+  `Application` se prueba **sin referenciar `Infrastructure`, sin PostgreSQL y sin
+  Docker**. GitHub Actions las ejecuta en cada push y Pull Request.
 - **Seguridad contextual:** los endpoints de catálogo son públicos, pero los de
   progreso requieren autenticación por exponer datos personales.
 - **Gestión de secretos:** contraseñas y API keys nunca se versionan; viven en
@@ -354,6 +364,43 @@ la API (Swagger) en `https://localhost:44353/swagger`.
 
 ---
 
+## 🧪 Pruebas e Integración Continua
+
+La suite corre **sin base de datos, sin red y sin Docker**: no hace falta levantar
+nada, basta con el SDK de .NET.
+
+```bash
+dotnet test GymTracker.slnx
+```
+
+**123 pruebas en menos de 1 segundo.** El criterio de selección no fue "qué es
+fácil de probar" sino **"dónde duele más un fallo silencioso"**: se prueban las
+clases que sostienen decisiones ya documentadas en un ADR y aquellas cuyo fallo
+no produce ninguna excepción visible.
+
+| Clase probada | Pruebas | Qué protege | ADR |
+|---|---|---|---|
+| `CalculoVolumenFactory` | 8 | Que cada `TipoVolumen` devuelva su estrategia: cruzar dos ramas del `switch` compila sin error | ADR-05 |
+| Las 3 estrategias de volumen | 12 | La aritmética del tonelaje: una fórmula alterada da un número plausible pero falso | ADR-05 |
+| `GuardarrielChat` | 36 | La detección de *prompt injection* y, sobre todo, que **no** bloquee preguntas legítimas | ADR-07 |
+| `RouterContexto` | 43 | La clasificación que decide cuántos tokens se pagan y si el modelo ve los datos del usuario | ADR-07 |
+| `RutinaService` | 24 | El invariante de *ownership*: que un usuario nunca vea ni modifique datos de otro | ADR-03 / ADR-04 |
+
+> Escribir estas pruebas **descubrió un defecto real en producción**: el router no
+> reconocía las peticiones de consejo en primera persona ("¿cómo **mejoro** mi
+> rutina?"), así que el chatbot respondía sin el contexto del usuario. Un fallo
+> silencioso que ninguna revisión visual detecta. Ver el
+> **[ADR-08](./docs/ADR/ADR-08-Fernando-Castro.md)**.
+
+**Integración Continua.** El workflow [`ci.yml`](./.github/workflows/ci.yml)
+enciende un runner Ubuntu limpio en cada push y cada Pull Request, instala el SDK
+de .NET 10 y ejecuta `restore` → `build` (Release) → `test`. Si algo falla, el
+Pull Request queda marcado en rojo antes de que nada llegue a `main`.
+
+<p align="right">(<a href="#readme-top">volver arriba</a>)</p>
+
+---
+
 ## Hoja de ruta
 
 **Ya implementado**
@@ -364,13 +411,16 @@ la API (Swagger) en `https://localhost:44353/swagger`.
 - Catálogo de +1300 ejercicios con GIFs (seed local)
 - Coach IA (análisis de rutinas con Claude + fallback a Gemini)
 - Chatbot con contexto de entrenamiento (pipeline de LLM, ADR-07)
+- Suite de 123 pruebas xUnit + pipeline de CI con GitHub Actions (ADR-08)
 
 **Pendiente**
 
 - **🧠 Generador de rutinas con IA** — crear rutinas a partir de un objetivo, con
   salida estructurada de un LLM (ver [`docs/PLAN-integraciones-IA.md`](./docs/PLAN-integraciones-IA.md)).
-- **☁️ Despliegue en AWS** — Amazon RDS (PostgreSQL), ECS Fargate + ECR + ALB,
-  Terraform (IaC) y GitHub Actions (CI/CD).
+- **☁️ Despliegue en AWS** — Amazon EC2 + RDS (PostgreSQL), ECR, Terraform (IaC) y
+  despliegue continuo encadenado al pipeline de CI. Se descartó ECS Fargate + ALB
+  por costo (~$45–60/mes) frente al valor real que aporta a una app mono-usuario;
+  la decisión quedará razonada en el ADR-09.
 
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazon-web-services&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=flat-square&logo=terraform&logoColor=white)
