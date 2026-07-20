@@ -11,8 +11,14 @@
 name: CI
 
 on:
-  # En cada push a cualquier rama: retroalimentación inmediata mientras trabajas.
+  # En cada push a estas ramas: retroalimentación inmediata mientras trabajas.
+  # OJO: 'push:' sin valor debajo se interpreta como null y GitHub rechaza el
+  # workflow con startup_failure. El evento necesita configuración explícita.
   push:
+    branches:
+      - main
+      - 'pruebas-ci'
+      - 'despliegue-aws'
   # Y en cada Pull Request hacia main: es lo que pinta el check ✅ / ❌ en el PR.
   pull_request:
     branches: [main]
