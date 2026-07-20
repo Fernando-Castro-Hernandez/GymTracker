@@ -3,7 +3,9 @@ using GymTracker.Application.Abstractions;
 using GymTracker.Data;
 using GymTracker.Infrastructure;
 using GymTracker.Web.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 
@@ -73,6 +75,48 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+// ===== Detrás del proxy inverso (ADR-09) =====
+// En producción la app corre tras Caddy, que termina el TLS y le habla a Kestrel
+// por HTTP en la red interna de Docker. Sin esto, ASP.NET Core IGNORA las
+// cabeceras del proxy y cree que toda petición llegó insegura, con tres efectos
+// silenciosos (ninguno lanza error):
+//   1. Las cookies de Identity no se marcan Secure y pueden viajar en claro.
+//   2. Request.IsHttps siempre es false.
+//   3. Todos los visitantes aparecen con la IP de Caddy, así que el rate limiter
+//      del chatbot (que usa RemoteIpAddress como clave de respaldo) los
+//      agruparía a todos en una sola partición.
+// Va al PRINCIPIO del pipeline: el esquema y la IP deben corregirse antes de que
+// cualquier middleware los lea.
+var opcionesProxy = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor
+};
+// Por defecto sólo se aceptan estas cabeceras de proxies en loopback, y Caddy
+// corre en otro contenedor con su propia IP de red Docker. Vaciar las listas es
+// seguro AQUÍ porque la app no publica ningún puerto al host (ver
+// docker-compose.prod.yml: sólo `expose`, no `ports`), de modo que la única
+// fuente posible de esas cabeceras es Caddy.
+opcionesProxy.KnownIPNetworks.Clear();
+opcionesProxy.KnownProxies.Clear();
+app.UseForwardedHeaders(opcionesProxy);
+
+// ===== Migraciones automáticas en producción (ADR-09) =====
+// RDS arranca vacío: sin tablas, la app fallaría al primer login. Aplicar las
+// migraciones al arrancar evita instalar el SDK de .NET y las herramientas
+// `dotnet ef` en el servidor, lo que contradiría el objetivo del Dockerfile.
+// En Development NO se hace, para seguir controlando las migraciones a mano.
+//
+// TRADE-OFF ACEPTADO: con varias instancias, dos arrancando a la vez podrían
+// migrar en paralelo y corromper el historial. Con una sola instancia —la
+// decisión de despliegue de este proyecto— no hay condición de carrera. Habría
+// que revisarlo si algún día se escala horizontalmente.
+if (!app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var contexto = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    contexto.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
