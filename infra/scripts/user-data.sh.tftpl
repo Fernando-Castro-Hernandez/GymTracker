@@ -1,0 +1,24 @@
+#!/bin/bash
+set -euo pipefail
+
+# Plantilla del user_data de la EC2 (ADR-09).
+#
+# Se usa templatefile() y NO un heredoc dentro de compute.tf por un motivo
+# concreto: el shebang #!/bin/bash DEBE estar en la columna 1. Con un heredoc
+# indentado (<<-EOT), Terraform sólo quita la sangría COMÚN a todas las líneas, y
+# como los archivos insertados con file() empiezan en columna 0, la sangría común
+# resulta ser cero y no se elimina nada. El shebang llegaba con cuatro espacios
+# delante, el kernel no lo reconocía como intérprete y cloud-init fallaba en 9
+# segundos sin instalar nada. Este archivo no tiene sangría que interfiera.
+
+mkdir -p /opt/gymtracker
+
+cat > /opt/gymtracker/Caddyfile <<'ARCHIVO_CADDY'
+${caddyfile}
+ARCHIVO_CADDY
+
+cat > /opt/gymtracker/docker-compose.prod.yml <<'ARCHIVO_COMPOSE'
+${compose}
+ARCHIVO_COMPOSE
+
+${arranque}

@@ -1,0 +1,36 @@
+# Archivos de Terraform que NUNCA deben llegar al repositorio.
+#
+# Sin este archivo, un `git add .` subiría la contraseña de RDS en texto plano a
+# GitHub. No es hipotético: el ADR-06 ya registra la Deuda Técnica #1 por
+# credenciales filtradas en el historial. Esto evita repetir el error.
+
+# ===== Estado =====
+# Contiene TODOS los valores de los recursos, incluida la contraseña de la base
+# de datos sin cifrar. El estado real vive en el bucket de S3 (ver versions.tf);
+# estos archivos son copias locales y de respaldo.
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# ===== Variables con valores =====
+# Aquí es donde se escribirían contraseñas al usar -var-file.
+# Se exceptúa *.tfvars.example, que sí se versiona como plantilla sin secretos.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# ===== Directorio de trabajo =====
+# Los plugins descargados del proveedor de AWS: cientos de MB de binarios que se
+# vuelven a bajar con `terraform init`. No tiene sentido versionarlos.
+.terraform/
+.terraform.lock.hcl.bak
+
+# ===== Archivos de plan =====
+# Un plan guardado con `terraform plan -out` incluye los valores de las variables
+# sensibles.
+*.tfplan
+*.tfplan.*
+
+# ===== Registros de depuración =====
+crash.log
+crash.*.log
