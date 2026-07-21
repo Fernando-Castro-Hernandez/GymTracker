@@ -267,6 +267,24 @@ data "aws_iam_policy_document" "github_despliegue" {
     ]
     resources = ["*"]
   }
+
+  # Localizar la instancia por su etiqueta Name en vez de tener el ID escrito a
+  # mano en el workflow, que se rompería si Terraform recreara la EC2.
+  # DescribeInstances no admite acotarse por recurso: es una llamada de listado.
+  statement {
+    sid       = "LocalizarLaInstanciaPorEtiqueta"
+    actions   = ["ec2:DescribeInstances"]
+    resources = ["*"]
+  }
+
+  # Actualizar la etiqueta de la imagen desplegada. Acotado a ESE parámetro: el
+  # rol de GitHub Actions no puede leer ni escribir los secretos (la connection
+  # string ni las API keys), que sólo lee la instancia con su propio rol.
+  statement {
+    sid       = "RegistrarLaVersionDesplegada"
+    actions   = ["ssm:PutParameter"]
+    resources = ["arn:aws:ssm:${data.aws_region.actual.region}:${data.aws_caller_identity.actual.account_id}:parameter/${var.proyecto}/imagen-uri"]
+  }
 }
 
 resource "aws_iam_role_policy" "github_despliegue" {

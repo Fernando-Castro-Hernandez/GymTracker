@@ -1,14 +1,31 @@
-# Integración Continua de GymTracker.
+# Integración Continua y Despliegue Continuo de GymTracker (ADR-08 y ADR-09).
 #
 # Qué hace: en cada push y en cada Pull Request, GitHub enciende una máquina
 # Ubuntu limpia, descarga el código, instala el SDK de .NET, compila la solución
 # y ejecuta la suite de pruebas xUnit. Si algo falla, el check sale en rojo y el
 # Pull Request queda marcado antes de que nada llegue a main.
 #
+# Y SOLO si las pruebas pasan y SOLO en main, el segundo job construye la imagen
+# Docker, la publica en ECR y ordena el redespliegue en la EC2.
+#
 # Por qué existe: las pruebas solo protegen si alguien las corre. Automatizarlas
-# elimina el "se me olvidó ejecutarlas antes de subir".
+# elimina el "se me olvidó ejecutarlas antes de subir" — y encadenar el
+# despliegue a ellas hace imposible publicar una versión que no compila o que
+# rompe una prueba.
 
 name: CI
+
+# ===== Permisos del token del workflow =====
+# `id-token: write` es lo que habilita OIDC: permite al job PEDIR un token
+# firmado de identidad para presentárselo a AWS. Sin este permiso, la
+# autenticación federada falla con "Credentials could not be loaded".
+#
+# `contents: read` es el mínimo para descargar el código. Se declaran ambos
+# explícitamente porque fijar cualquier permiso reduce todos los demás a
+# "ninguno", que es justo lo que se busca.
+permissions:
+  id-token: write
+  contents: read
 
 on:
   # En cada push a estas ramas: retroalimentación inmediata mientras trabajas.
@@ -53,3 +70,167 @@ jobs:
 
       - name: Ejecutar las pruebas xUnit
         run: dotnet test GymTracker.slnx --configuration Release --no-build --verbosity normal
+
+  # ==========================================================================
+  # DESPLIEGUE CONTINUO (ADR-09)
+  # ==========================================================================
+  desplegar:
+    name: Publicar en AWS
+    runs-on: ubuntu-latest
+
+    # LA LÍNEA MÁS IMPORTANTE DEL PIPELINE.
+    #
+    # `needs` encadena este job al anterior: si una sola de las 123 pruebas
+    # falla, este job NI SIQUIERA ARRANCA. Es el motivo de haber construido la
+    # suite de pruebas antes que el despliegue: sin ella, este pipeline
+    # publicaría con la misma alegría una versión rota.
+    needs: pruebas
+
+    # Y sólo desde main. Un push a una rama de trabajo compila y prueba, pero no
+    # toca producción. Coincide con la condición del rol OIDC en AWS, que sólo
+    # confía en tokens con ref:refs/heads/main: aunque alguien borrara esta
+    # línea, AWS seguiría rechazando el despliegue desde otra rama.
+    if: github.ref == 'refs/heads/main'
+
+    env:
+      AWS_REGION: us-east-1
+      ECR_REPOSITORIO: gymtracker
+
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      # ===== Autenticación sin llaves guardadas =====
+      # No hay ninguna AWS_ACCESS_KEY en los Secrets del repositorio. GitHub
+      # emite un token firmado que declara de qué repositorio y rama viene, AWS
+      # verifica la firma contra las llaves públicas de GitHub y devuelve
+      # credenciales temporales de una hora.
+      #
+      # El ARN del rol no es un secreto: sin un token válido emitido para este
+      # repositorio y esta rama, conocerlo no sirve de nada.
+      - name: Autenticarse en AWS por OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::602440904865:role/gymtracker-rol-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Iniciar sesión en ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # El ID de la instancia se CONSULTA por etiqueta en vez de escribirse a
+      # mano. Terraform recrea la EC2 ante ciertos cambios (por ejemplo, si se
+      # modifica el user_data) y el ID nuevo rompería un valor fijo, con un fallo
+      # que sólo aparecería en mitad de un despliegue.
+      - name: Localizar la instancia por su etiqueta
+        run: |
+          ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=gymtracker-app" \
+                      "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text)
+
+          if [ -z "$ID" ] || [ "$ID" = "None" ]; then
+            echo "::error::No se encontró ninguna instancia en ejecución con la etiqueta Name=gymtracker-app"
+            exit 1
+          fi
+
+          echo "INSTANCIA_ID=$ID" >> "$GITHUB_ENV"
+          echo "Instancia localizada: $ID"
+
+      # ===== Construir y publicar la imagen =====
+      # Se etiqueta DOS veces:
+      #   · Con el SHA del commit: identifica exactamente qué código corre en
+      #     producción y permite volver a una versión concreta.
+      #   · Con "latest": la referencia estable por defecto.
+      - name: Construir y publicar la imagen en ECR
+        env:
+          REGISTRO: ${{ steps.ecr.outputs.registry }}
+          SHA: ${{ github.sha }}
+        run: |
+          IMAGEN="$REGISTRO/$ECR_REPOSITORIO"
+          docker build -t "$IMAGEN:$SHA" -t "$IMAGEN:latest" .
+          docker push "$IMAGEN:$SHA"
+          docker push "$IMAGEN:latest"
+          echo "IMAGEN_DESPLEGADA=$IMAGEN:$SHA" >> "$GITHUB_ENV"
+
+      # Guardar la etiqueta exacta en SSM permite dos cosas: que la EC2 sepa qué
+      # versión levantar, y que un rollback sea cambiar este parámetro por un SHA
+      # anterior y redesplegar, sin reconstruir nada.
+      - name: Registrar la versión desplegada en SSM
+        run: |
+          aws ssm put-parameter \
+            --name "/gymtracker/imagen-uri" \
+            --value "$IMAGEN_DESPLEGADA" \
+            --type String \
+            --overwrite
+
+      # ===== Desplegar SIN SSH =====
+      # Reemplaza al `ssh servidor "docker compose pull && up -d"` tradicional.
+      # No hay puerto 22 abierto ni llave privada guardada: se le pide a AWS que
+      # ejecute un comando en la instancia, y AWS lo autoriza por IAM.
+      #
+      # El script desplegar.sh ya vive en la máquina, puesto por el user_data de
+      # Terraform: relee los secretos de SSM, se autentica contra ECR con el rol
+      # de instancia, descarga la imagen y recrea los contenedores.
+      - name: Ordenar el redespliegue en la EC2
+        id: enviar
+        run: |
+          COMANDO_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCIA_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Despliegue del commit ${GITHUB_SHA::7}" \
+            --parameters 'commands=["/opt/gymtracker/desplegar.sh"]' \
+            --query "Command.CommandId" \
+            --output text)
+          echo "comando_id=$COMANDO_ID" >> "$GITHUB_OUTPUT"
+          echo "Comando enviado: $COMANDO_ID"
+
+      # send-command es asíncrono: devuelve un ID y termina. Sin esperar el
+      # resultado, el workflow saldría en verde aunque el despliegue fallara en
+      # la instancia. Este paso es lo que hace honesto el check.
+      - name: Esperar y verificar el resultado
+        run: |
+          COMANDO_ID="${{ steps.enviar.outputs.comando_id }}"
+
+          # El comando tarda: descargar 447 MB de imagen y recrear contenedores.
+          for i in $(seq 1 40); do
+            ESTADO=$(aws ssm get-command-invocation \
+              --command-id "$COMANDO_ID" \
+              --instance-id "$INSTANCIA_ID" \
+              --query "Status" --output text 2>/dev/null || echo "Pending")
+
+            echo "[$i/40] Estado: $ESTADO"
+
+            case "$ESTADO" in
+              Success) break ;;
+              Failed|Cancelled|TimedOut)
+                echo "::error::El despliegue falló en la instancia con estado $ESTADO"
+                aws ssm get-command-invocation \
+                  --command-id "$COMANDO_ID" --instance-id "$INSTANCIA_ID" \
+                  --query "StandardErrorContent" --output text
+                exit 1
+                ;;
+            esac
+            sleep 15
+          done
+
+          if [ "$ESTADO" != "Success" ]; then
+            echo "::error::El despliegue no terminó a tiempo (último estado: $ESTADO)"
+            exit 1
+          fi
+
+          echo "===== Salida del despliegue en la instancia ====="
+          aws ssm get-command-invocation \
+            --command-id "$COMANDO_ID" --instance-id "$INSTANCIA_ID" \
+            --query "StandardOutputContent" --output text
+
+      - name: Resumen
+        run: |
+          echo "### Despliegue completado :rocket:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | \`${GITHUB_SHA::7}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Imagen | \`$IMAGEN_DESPLEGADA\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| URL | http://54.82.207.23 |" >> "$GITHUB_STEP_SUMMARY"
