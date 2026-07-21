@@ -145,6 +145,13 @@ El proyecto documenta sus decisiones en `docs/ADR/`. Resumen:
   defensa real), router de *contexto* (no de modelo), prompt caching de Anthropic y
   observabilidad de tokens/latencia. Descarta a conciencia RAG semántico y
   capacidades agénticas.
+- **ADR-08** — Estrategia de pruebas (xUnit) e Integración Continua.
+  **IMPLEMENTADO**: `GymTracker.Tests` (quinto proyecto, xUnit v2), **123 pruebas**
+  sobre las clases que sostienen decisiones arquitectónicas (patrones GOF del
+  ADR-05, guardarrieles del ADR-07, ownership del ADR-03), y `.github/workflows/ci.yml`.
+- **ADR-09** — Despliegue en AWS con **EC2 + RDS**, Terraform (IaC) y despliegue
+  continuo. **IMPLEMENTADO** (rama `despliegue-aws`). Ver la sección "Despliegue en
+  AWS" más abajo.
 
 ### Integraciones de IA (Coach y Chatbot)
 
@@ -192,6 +199,39 @@ Ningún secreto se versiona. Reglas:
 - **API keys de LLMs:** solo en User Secrets (dev) / variables de entorno (prod).
 - `appsettings.json` y `docker-compose.yml` **no deben** contener contraseñas ni
   keys en texto plano. Al añadir un secreto nuevo, seguir este mismo patrón.
+- **En producción (AWS)** los secretos viven en **SSM Parameter Store** como
+  `SecureString`, y la EC2 los lee con su rol IAM (ver la sección de despliegue).
+  Nunca pasan por Terraform ni por su estado.
+
+## Despliegue en AWS (ADR-09)
+
+La app está **desplegada en AWS** (cuenta `602440904865`, región `us-east-1`),
+además de correr en local para desarrollo. Arquitectura: una EC2 `t3.small` con
+Docker (app + Caddy como proxy inverso con TLS) y **RDS PostgreSQL 16** aislado en
+subred privada. Toda la infraestructura vive como código en **`infra/`**
+(Terraform), con el estado en el bucket S3 `gymtracker-tfstate-602440904865`.
+
+Reglas y notas operativas:
+
+- **La infraestructura NO se toca sin confirmación**, igual que las capas de
+  código. Cambios en `infra/*.tf` afectan recursos que cuestan dinero. `terraform
+  apply` solo lo ejecuta Fernando (ver [[protocolo-de-trabajo-gymtracker]]).
+- Comandos `terraform` requieren la variable de entorno **`TF_VAR_db_password`**
+  (se pierde al cerrar la terminal; re-exportar con `read -s`). El estado remoto
+  está en S3, así que cualquier máquina con las credenciales puede operar la infra.
+- **`terraform destroy`** baja el costo de ~$35/mes a ~$0.55/mes y `apply` lo
+  recrea idéntico en ~12 min. Es la vía prevista para apagar entre demostraciones.
+  RDS tiene `final_snapshot`, así que no se pierden datos.
+- **DNS por Cloudflare, no Route 53** (el registro en AWS lo bloqueó el filtro
+  antifraude de la cuenta nueva). Dominio: `novuxtracker.com` (aún sin registrar;
+  mientras tanto sirve por HTTP en la IP pública `54.82.207.23`).
+- El **despliegue continuo** (`ci.yml`, job `desplegar`) solo corre en `main` y
+  **solo si las 123 pruebas pasan**. Publica la imagen en ECR y redespliega por
+  `aws ssm send-command` (sin SSH). GitHub Actions se autentica por **OIDC**, sin
+  access keys guardadas.
+- **Acceso a la instancia: SSM Session Manager, nunca SSH** (puerto 22 cerrado).
+- El `docker-compose.prod.yml` de `deploy/` es solo para la EC2; el
+  `docker-compose.yml` de la raíz sigue siendo para desarrollo local y no se toca.
 
 ## Convenciones importantes
 

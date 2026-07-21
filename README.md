@@ -401,6 +401,73 @@ Pull Request queda marcado en rojo antes de que nada llegue a `main`.
 
 ---
 
+## ☁️ Despliegue en AWS
+
+GymTracker corre en **AWS** sobre una arquitectura **EC2 + RDS PostgreSQL**,
+descrita íntegramente con **Terraform** y publicada por un **despliegue continuo
+encadenado a las pruebas**: si una sola de las 123 pruebas falla, no se despliega.
+La decisión completa está en el
+**[ADR-09](./docs/ADR/ADR-09-Fernando-Castro.md)**.
+
+**Arquitectura.** Una instancia EC2 con Docker ejecuta la app y **Caddy** (proxy
+inverso con TLS automático de Let's Encrypt). La base es **RDS PostgreSQL 16
+gestionado**, aislado en una subred privada **sin IP pública ni ruta a internet**:
+la seguridad de la base no la decide la contraseña, la decide que no exista camino
+de red hacia ella. El **puerto 22 está cerrado**; la administración es por **SSM
+Session Manager**, sin llave `.pem`.
+
+**Sin credenciales en disco.** Los secretos (connection string y API keys) viven
+en **SSM Parameter Store** cifrados con KMS; la EC2 los lee con su **rol IAM**.
+GitHub Actions se autentica ante AWS por **OIDC**, sin ninguna `AWS_ACCESS_KEY`
+guardada en el repositorio. Ni el código, ni GitHub, ni el estado de Terraform
+contienen una credencial de AWS escrita.
+
+**Costo controlado.** ~$35/mes encendido. `terraform destroy` lo baja a ~$0.55/mes
+entre demostraciones y `terraform apply` recrea todo idéntico en ~12 minutos —la
+razón práctica de usar infraestructura como código. Se descartó ECS Fargate + ALB
+(~$45–60/mes) por ser sobreingeniería para una app de un usuario.
+
+**Vista de contenedores (C4 nivel 2).** El ADR-09 documenta la arquitectura con
+tres niveles de zoom del modelo **C4** (contexto, contenedores y red) más el flujo
+de arranque, secretos, OIDC y despliegue. Aquí, el nivel intermedio:
+
+```mermaid
+flowchart TB
+    usuario["👤 Usuario"]
+    gha["🔵 GitHub Actions<br/>(CI/CD)"]
+
+    subgraph aws["☁️ AWS · us-east-1"]
+        subgraph ec2["🖥️ EC2 t3.small (Docker) · Elastic IP"]
+            caddy["🔀 Caddy<br/>proxy + TLS · :80/:443"]
+            app["🏋️ GymTracker<br/>Kestrel :8080"]
+            caddy -->|"HTTP interno"| app
+        end
+        rds[("🔒 RDS PostgreSQL 16<br/>subred privada")]
+        ecr["📦 ECR"]
+        ssm["🔐 SSM (secretos)"]
+        app -->|"EF Core · 5432"| rds
+    end
+
+    usuario -->|"HTTPS"| caddy
+    gha -->|"push imagen"| ecr
+    gha -->|"send-command (sin SSH)"| ec2
+    ec2 -->|"pull imagen (rol IAM)"| ecr
+    ec2 -->|"lee secretos (rol IAM)"| ssm
+
+    classDef appc fill:#1a2a3a,stroke:#3498db,color:#aed6f1
+    classDef data fill:#2a1a3a,stroke:#9b59b6,color:#d7bde2
+    class caddy,app appc
+    class rds,ecr,ssm data
+```
+
+> Los tres niveles C4 completos, con el aislamiento de red y los flujos de
+> secretos/OIDC/CD, están en el
+> **[ADR-09](./docs/ADR/ADR-09-Fernando-Castro.md#arquitectura-resultante-modelo-c4)**.
+
+<p align="right">(<a href="#readme-top">volver arriba</a>)</p>
+
+---
+
 ## Hoja de ruta
 
 **Ya implementado**
@@ -412,19 +479,20 @@ Pull Request queda marcado en rojo antes de que nada llegue a `main`.
 - Coach IA (análisis de rutinas con Claude + fallback a Gemini)
 - Chatbot con contexto de entrenamiento (pipeline de LLM, ADR-07)
 - Suite de 123 pruebas xUnit + pipeline de CI con GitHub Actions (ADR-08)
+- **☁️ Despliegue en AWS** — EC2 + RDS PostgreSQL, ECR, Terraform (IaC) y
+  despliegue continuo encadenado a las pruebas (ADR-09)
+
+![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazon-web-services&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=flat-square&logo=terraform&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white)
 
 **Pendiente**
 
 - **🧠 Generador de rutinas con IA** — crear rutinas a partir de un objetivo, con
   salida estructurada de un LLM (ver [`docs/PLAN-integraciones-IA.md`](./docs/PLAN-integraciones-IA.md)).
-- **☁️ Despliegue en AWS** — Amazon EC2 + RDS (PostgreSQL), ECR, Terraform (IaC) y
-  despliegue continuo encadenado al pipeline de CI. Se descartó ECS Fargate + ALB
-  por costo (~$45–60/mes) frente al valor real que aporta a una app mono-usuario;
-  la decisión quedará razonada en el ADR-09.
-
-![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazon-web-services&logoColor=white)
-![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=flat-square&logo=terraform&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white)
+- **🌐 Dominio propio** — conectar `novuxtracker.com` vía Cloudflare para servir
+  con HTTPS (el registro en AWS quedó bloqueado por el filtro antifraude de la
+  cuenta nueva).
 
 <p align="right">(<a href="#readme-top">volver arriba</a>)</p>
 

@@ -168,5 +168,15 @@ dentro de una **VPC**, con el tráfico HTTPS entrando por un Internet Gateway.
 Esta migración es una decisión consciente a futuro y no requiere ningún cambio de
 código gracias a EF Core (mismo proveedor PostgreSQL).
 
+> **Actualización (20/07/2026) — este estado previsto ya es real.** El despliegue
+> se implementó tal como se anticipó aquí: EC2 + RDS PostgreSQL dentro de una VPC,
+> con el tráfico HTTPS por un Internet Gateway. La arquitectura completa, las
+> alternativas descartadas (ECS Fargate, Multi-AZ, NAT Gateway, SSH con `.pem`) y
+> el manejo de secretos e identidades están en el
+> **[ADR-09](./ADR-09-Fernando-Castro.md)**. La predicción de que "no requiere
+> ningún cambio de código" se cumplió casi por completo: solo hicieron falta dos
+> ajustes mínimos en `Program.cs` (`UseForwardedHeaders` para el proxy inverso y
+> `Migrate()` al arrancar), ninguno en la lógica de negocio.
+
 **Audiencia:** DevOps / sysadmin —en este caso yo mismo cuando haga la migración—
 para saber qué hay que configurar para que funcione en producción.
