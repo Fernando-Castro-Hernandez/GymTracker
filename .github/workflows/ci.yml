@@ -233,4 +233,4 @@ jobs:
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit | \`${GITHUB_SHA::7}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Imagen | \`$IMAGEN_DESPLEGADA\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| URL | http://54.82.207.23 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| URL | https://gymtrackers.app |" >> "$GITHUB_STEP_SUMMARY"
