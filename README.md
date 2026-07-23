@@ -403,6 +403,9 @@ Pull Request queda marcado en rojo antes de que nada llegue a `main`.
 
 ## ☁️ Despliegue en AWS
 
+> **🟢 App en vivo: [https://gymtrackers.app](https://gymtrackers.app)** — con
+> HTTPS y certificado válido (Let's Encrypt, renovación automática).
+
 GymTracker corre en **AWS** sobre una arquitectura **EC2 + RDS PostgreSQL**,
 descrita íntegramente con **Terraform** y publicada por un **despliegue continuo
 encadenado a las pruebas**: si una sola de las 123 pruebas falla, no se despliega.
@@ -439,7 +442,7 @@ flowchart TB
     subgraph aws["☁️ AWS · us-east-1"]
         subgraph ec2["🖥️ EC2 t3.small (Docker) · Elastic IP"]
             caddy["🔀 Caddy<br/>proxy + TLS · :80/:443"]
-            app["🏋️ GymTracker<br/>Kestrel :8080"]
+            app["GymTracker<br/>Kestrel :8080"]
             caddy -->|"HTTP interno"| app
         end
         rds[("🔒 RDS PostgreSQL 16<br/>subred privada")]
@@ -481,6 +484,8 @@ flowchart TB
 - Suite de 123 pruebas xUnit + pipeline de CI con GitHub Actions (ADR-08)
 - **☁️ Despliegue en AWS** — EC2 + RDS PostgreSQL, ECR, Terraform (IaC) y
   despliegue continuo encadenado a las pruebas (ADR-09)
+- **🌐 Dominio propio con HTTPS** — [gymtrackers.app](https://gymtrackers.app) vía
+  Cloudflare + Caddy (certificado Let's Encrypt con renovación automática)
 
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazon-web-services&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=flat-square&logo=terraform&logoColor=white)
@@ -490,9 +495,6 @@ flowchart TB
 
 - **🧠 Generador de rutinas con IA** — crear rutinas a partir de un objetivo, con
   salida estructurada de un LLM (ver [`docs/PLAN-integraciones-IA.md`](./docs/PLAN-integraciones-IA.md)).
-- **🌐 Dominio propio** — conectar `novuxtracker.com` vía Cloudflare para servir
-  con HTTPS (el registro en AWS quedó bloqueado por el filtro antifraude de la
-  cuenta nueva).
 
 <p align="right">(<a href="#readme-top">volver arriba</a>)</p>
 
