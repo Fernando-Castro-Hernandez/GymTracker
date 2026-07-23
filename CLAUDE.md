@@ -223,8 +223,13 @@ Reglas y notas operativas:
   recrea idéntico en ~12 min. Es la vía prevista para apagar entre demostraciones.
   RDS tiene `final_snapshot`, así que no se pierden datos.
 - **DNS por Cloudflare, no Route 53** (el registro en AWS lo bloqueó el filtro
-  antifraude de la cuenta nueva). Dominio: `novuxtracker.com` (aún sin registrar;
-  mientras tanto sirve por HTTP en la IP pública `54.82.207.23`).
+  antifraude de la cuenta nueva). Dominio: **`gymtrackers.app`**, en vivo con
+  HTTPS (certificado Let's Encrypt emitido por Caddy, renovación automática).
+  Registro A a la IP `54.82.207.23` con el proxy de Cloudflare en "DNS only"
+  (nube gris): con el proxy naranja, el desafío ACME no llega y Caddy no puede
+  emitir el certificado. El dominio se guarda en el parámetro SSM
+  `/gymtracker/dominio`; cambiarlo es actualizar ese parámetro y recrear Caddy,
+  sin tocar código, infraestructura ni CI/CD.
 - El **despliegue continuo** (`ci.yml`, job `desplegar`) solo corre en `main` y
   **solo si las 123 pruebas pasan**. Publica la imagen en ECR y redespliega por
   `aws ssm send-command` (sin SSH). GitHub Actions se autentica por **OIDC**, sin
