@@ -3,8 +3,24 @@
 @{
     // Helper de estado activo: marca el enlace del controlador actual.
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
     string NavActive(string controller) =>
         string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+
+    // La pantalla de carga (Lottie) SOLO se muestra al entrar a la lista
+    // principal de cada sección (el Index de los controladores de la navbar),
+    // no en subpáginas como Crear/Editar/Detalles/Registrar. Antes aparecía en
+    // toda navegación —al vivir en el layout compartido— y con 3 s por vista se
+    // volvía molesta. Aquí el overlay ni siquiera se renderiza fuera de esas
+    // páginas, así que no hay nada que ocultar.
+    var seccionesConLoader = new[]
+    {
+        "Home", "Ejercicios", "Rutinas", "Sesiones", "Mediciones", "Progreso", "Catalogo"
+    };
+    var mostrarLoader =
+        currentAction is not null &&
+        string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase) &&
+        seccionesConLoader.Contains(currentController, StringComparer.OrdinalIgnoreCase);
 }
 
 <!DOCTYPE html>
@@ -19,12 +35,16 @@
     <link rel="stylesheet" href="~/GymTracker.styles.css" asp-append-version="true" />
 </head>
 <body>
-    @* Pantalla de carga (Lottie): overlay a pantalla completa que se muestra en
-       cada carga de página y hace fade-out cuando el DOM está listo. La lógica
-       vive en site.js; el estilo en site.css. Es puramente visual. *@
-    <div id="gt-loader" class="gt-loader" aria-hidden="true">
-        <div id="gt-loader-anim" class="gt-loader-anim"></div>
-    </div>
+    @* Pantalla de carga (Lottie): overlay a pantalla completa. Solo se renderiza
+       en el índice de las secciones principales (ver `mostrarLoader` arriba), no
+       en cada navegación. La lógica vive en site.js; el estilo en site.css.
+       Es puramente visual. *@
+    @if (mostrarLoader)
+    {
+        <div id="gt-loader" class="gt-loader" aria-hidden="true">
+            <div id="gt-loader-anim" class="gt-loader-anim"></div>
+        </div>
+    }
 
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm gt-navbar mb-4">
